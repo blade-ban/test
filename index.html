@@ -1,0 +1,2514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한자 찾기 AR</title>
+<style>
+:root{
+  --bg:#f6f4ef;--card:#ffffff;--ink:#1d1d1f;--muted:#6b6b70;--line:#e2ded5;
+  --accent:#b4462b;--accent-ink:#ffffff;--ok:#2e7d4f;--warn:#a8650f;--bad:#c0392b;--blue:#2563eb;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;-webkit-text-size-adjust:100%}
+.han{font-family:"Noto Serif KR","Nanum Myeongjo","AppleMyungjo","Batang",serif}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 14px;-webkit-tap-highlight-color:transparent}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,textarea,select{font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;background:#fff;color:var(--ink)}
+label{display:block;font-size:.85rem;color:var(--muted)}
+label>input,label>select,label>textarea{margin-top:3px;color:var(--ink)}
+[hidden]{display:none!important}
+code{background:rgba(0,0,0,.06);padding:0 4px;border-radius:4px}
+
+/* ===== 교사용 편집기 ===== */
+#builder{max-width:980px;margin:0 auto;padding:16px 16px 80px}
+.b-head h1{font-size:1.4rem;margin:8px 0 2px}
+.b-head p{margin:0 0 8px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.card h2{font-size:1.05rem;margin:0 0 10px}
+.card h3{font-size:.95rem;margin:14px 0 6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.row>*{flex:1 1 140px}
+.row>button{flex:0 0 auto}
+.note{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+.chk{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:.95rem;margin-top:22px}
+.chk input{width:auto}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{text-align:left;padding:12px;border-width:2px}
+.seg button b{display:block;font-size:1rem}
+.seg button span{font-size:.82rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{border-color:var(--accent);background:#fbefe9}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tabs button{padding:7px 12px;font-size:.92rem}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:5px;max-height:300px;overflow:auto;padding:4px;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fdfcf9}
+.hz-grid button{padding:4px 2px;display:flex;flex-direction:column;align-items:center;line-height:1.15;border-radius:8px}
+.hz-grid button .c{font-size:1.45rem}
+.hz-grid button .r{font-size:.66rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hz-grid button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.hz-grid button[aria-pressed="true"] .r{color:#fde4da}
+.mode-walk .only-spot,.mode-spot .only-walk{display:none!important}
+#b-map{height:440px;border-radius:10px;border:1px solid var(--line);margin-top:8px;background:#e8e6e0;z-index:0}
+.placing #b-map{outline:3px solid var(--accent);cursor:crosshair}
+.map-fail{padding:24px;color:var(--muted);font-size:.92rem}
+#b-place-banner{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+#b-place-banner button{background:#fff;color:var(--accent);border:0;padding:4px 10px}
+#b-search-results{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+#b-search-results button{text-align:left;font-size:.88rem;padding:6px 10px}
+#b-spot-canvas{display:block;width:280px;max-width:100%;height:auto;margin:8px auto 0;background:#fdfcf9;border:1px solid var(--line);border-radius:50%}
+.item{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#fdfcf9;transition:box-shadow .2s}
+.item.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(180,70,43,.15)}
+.item-top{display:flex;gap:8px;align-items:center}
+.item-top .num{font-size:.8rem;color:var(--muted);min-width:1.6em;text-align:right}
+.item-top .f-sel{width:20px;height:20px;flex:0 0 auto;margin:0;cursor:pointer}
+.item.sel{background:#fbefe9}
+.sel-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fdfcf9;position:sticky;top:0;z-index:5}
+.f-char{width:76px!important;flex:0 0 76px;font-size:1.5rem;text-align:center;padding:4px}
+.item-top .f-meaning{flex:1}
+.item .btns{margin-top:8px}
+.item .btns button{font-size:.88rem;padding:7px 10px}
+.item details{margin-top:8px}
+.item summary{font-size:.88rem;color:var(--muted);cursor:pointer}
+.item-status{font-size:.82rem;margin-top:6px}
+.st-ok{color:var(--ok)}.st-warn{color:var(--warn)}.st-bad{color:var(--bad)}
+.del{color:var(--bad);flex:0 0 auto;padding:6px 10px}
+.check-list{margin:4px 0;padding-left:1.2em;font-size:.92rem}
+.b-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.help ol,.help ul{padding-left:1.2em;margin:8px 0}.help li{margin:4px 0}
+.help summary{font-weight:600;cursor:pointer}
+.map-pin{background:var(--accent);color:#fff;border:2px solid #fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 1px 4px rgba(0,0,0,.45);white-space:nowrap;line-height:1}
+textarea{min-height:110px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem}
+textarea.plain{font-family:inherit;font-size:.92rem;min-height:96px}
+#b-link-box{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fdfcf9}
+#b-qr{display:flex;justify-content:center;margin-top:10px}
+#b-qr img,#b-qr canvas{background:#fff;padding:14px;image-rendering:pixelated}
+.qr-modal{position:fixed;inset:0;z-index:6000;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:10px}
+.qr-modal h2{margin:0;font-size:1.6rem;text-align:center}
+#b-qr-modal-box img,#b-qr-modal-box canvas{image-rendering:pixelated;max-width:100%}
+.tbl-wrap{overflow:auto;margin-top:8px}
+.tbl{border-collapse:collapse;width:100%;font-size:.88rem}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+.tbl th{background:#f1eee7;position:sticky;top:0}
+.tbl td.c{font-size:1.3rem}
+.tbl tr.need td{background:#fff4ef}
+#b-toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:.92rem;z-index:7000;max-width:90vw}
+
+/* ===== 학생용 게임 ===== */
+body.g-mode{background:#111;overscroll-behavior:none}
+#game{position:fixed;inset:0;background:#15171c;color:#f2f2f2;overflow:hidden}
+#game input{background:#23262e;border-color:#3a3e48;color:#fff}
+#game button{background:#2a2e37;border-color:#3a3e48;color:#fff}
+#game button.primary{background:var(--accent);border-color:var(--accent)}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;overflow:auto}
+.panel{max-width:460px;width:100%;margin:auto;padding:28px 18px calc(28px + env(safe-area-inset-bottom))}
+.g-title{font-size:1.7rem;margin:0 0 4px}
+.g-sub{color:#b9bcc4;margin:0 0 18px}
+.g-box{background:#1f2229;border:1px solid #333743;border-radius:14px;padding:14px;margin:12px 0}
+.g-box h3{margin:0 0 6px;font-size:1rem}
+.g-btns{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.g-btns button{padding:13px}
+.g-warn{background:#3a2a12;border:1px solid #7a5512;color:#ffd99a;border-radius:10px;padding:10px 12px;font-size:.9rem;margin:10px 0}
+.g-small{font-size:.82rem;color:#9ea2ab}
+.g-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+#game .g-seg button{text-align:left;padding:10px 12px;border-width:2px}
+#game .g-seg button b{display:block}
+#game .g-seg button span{font-size:.78rem;color:#b9bcc4}
+#game .g-seg button[aria-pressed="true"]{border-color:#ffd400;background:#3a3420}
+.consent{white-space:pre-line;font-size:.84rem;color:#c9ccd3;background:#23262e;border-radius:10px;padding:10px;margin:6px 0}
+.consent-row{display:flex;gap:8px;align-items:center;color:#f2f2f2;font-size:.95rem}
+.consent-row input{width:auto}
+.perm{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.badge{font-size:.78rem;padding:3px 9px;border-radius:99px;background:#333743;color:#ddd;white-space:nowrap}
+.badge.ok{background:#1e4d33;color:#a8f0c6}.badge.bad{background:#5a1f1a;color:#ffb4a8}.badge.warn{background:#4d3a12;color:#ffd99a}
+.perm-msg{font-size:.86rem;color:#c9ccd3;margin-top:6px}
+.perm-msg ol{padding-left:1.2em;margin:6px 0}
+.perm-msg li{margin:3px 0}
+
+.play{overflow:hidden;background:#000}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none}
+#cam-bg{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 35%,#2b3442 0%,#12151b 70%)}
+#drag-pad{position:absolute;inset:0;z-index:1;touch-action:none;cursor:grab}
+#ar-layer{position:absolute;inset:0;z-index:2;pointer-events:none}
+.ar-mk{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:auto;transition:left .12s linear,top .2s linear;-webkit-tap-highlight-color:transparent}
+.ar-mk .ch{display:block;line-height:1.05;color:#fff;font-size:28px;font-weight:700;white-space:nowrap;transition:font-size .25s ease;
+  text-shadow:0 0 2px #000,0 0 4px #000,0 0 8px rgba(0,0,0,.85),2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000}
+.ar-mk .dist{margin-top:2px;font-size:.78rem;background:rgba(0,0,0,.6);padding:1px 8px;border-radius:99px;white-space:nowrap}
+/* 거리별 글자 크기: 10m 이내 > 20m > 30m > 40m > 그 너머 */
+.ar-mk.d10 .ch{font-size:72px}.ar-mk.d20 .ch{font-size:58px}.ar-mk.d30 .ch{font-size:46px}.ar-mk.d40 .ch{font-size:36px}.ar-mk.dfar .ch{font-size:28px}
+/* 제자리 모드: 거리 대신 같은 크기 */
+.ar-mk.spot .ch{font-size:64px}
+.ar-mk.spot .dist{display:none}
+/* 포획 가능: 가장 크게 + 노란 상자 */
+.ar-mk.hot .ch{font-size:108px;color:#fff5c2;animation:glow 1s ease-in-out infinite}
+.ar-mk.hot .dist{display:block;background:#ffd400;color:#1d1d1f;font-weight:800;font-size:1rem;padding:5px 14px;border-radius:8px;border:2px solid #1d1d1f;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+@keyframes glow{0%,100%{text-shadow:0 0 2px #000,0 0 6px #000,2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000,0 0 18px #ffd400}50%{text-shadow:0 0 2px #000,0 0 6px #000,2px 2px 0 #000,-2px 2px 0 #000,2px -2px 0 #000,-2px -2px 0 #000,0 0 34px #ffd400}}
+#aim{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border:2px dashed rgba(255,255,255,.35);border-radius:50%;z-index:1;pointer-events:none}
+#hud{position:absolute;left:0;right:0;top:0;z-index:5;display:flex;justify-content:space-between;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:linear-gradient(rgba(0,0,0,.7),rgba(0,0,0,0))}
+#hud-title{font-size:.85rem;color:#ccc}
+#hud-prog{font-size:1.25rem;font-weight:700}
+.hud-r{text-align:right}
+#hud-timer{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}
+#hud-timer.low{color:#ff7b6b}
+#hud-gps{font-size:.78rem;color:#ccc}
+#hud-gps.bad{color:#ffb36b}
+#spot-tools{position:absolute;left:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:6;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+#game #spot-tools button{padding:6px 10px;font-size:.82rem;background:rgba(30,32,38,.85)}
+#game #spot-tools button[aria-pressed="true"]{border-color:#ffd400}
+#preview-banner{position:absolute;top:calc(64px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:6;background:#2563eb;color:#fff;font-size:.78rem;padding:3px 10px;border-radius:99px;white-space:nowrap}
+#nearest{position:absolute;left:12px;right:12px;bottom:calc(204px + env(safe-area-inset-bottom));z-index:5;text-align:center;font-size:.95rem;pointer-events:none}
+#nearest span{display:inline-block;background:rgba(0,0,0,.65);padding:6px 12px;border-radius:12px}
+#radar{position:absolute;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));width:116px;height:116px;z-index:5;pointer-events:none}
+#play-btns{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.75))}
+#play-btns button{flex:1;padding:13px 6px;font-size:.88rem}
+#play-btns #btn-capture{flex:2;font-size:1.05rem}
+#dbg-toggle{position:absolute;left:12px;top:calc(100px + env(safe-area-inset-top));z-index:7;padding:6px 10px}
+#dbg{position:absolute;left:12px;right:12px;top:calc(70px + env(safe-area-inset-top));z-index:8;background:rgba(20,22,28,.95);border:1px solid #444;border-radius:12px;padding:12px;font-size:.85rem}
+#dbg label{color:#ccc;margin:6px 0}
+#dbg select,#dbg input[type=range]{margin-top:4px}
+.modal{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:#1f2229;border:1px solid #3a3e48;border-radius:16px;width:100%;max-width:420px;max-height:90vh;overflow:auto;padding:18px}
+#quiz-title{text-align:center;font-size:.85rem;color:#ffd400;min-height:1.2em}
+.quiz-char{font-size:84px;text-align:center;line-height:1.1;margin:4px 0 2px}
+.quiz-q{text-align:center;color:#c9ccd3;margin-bottom:12px}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quiz-opts button{padding:14px 6px;font-size:1.05rem}
+.quiz-opts button.wrong{background:#5a1f1a;border-color:#8a2e25;text-decoration:line-through}
+.quiz-opts button.right{background:#1e4d33;border-color:#2e7d4f}
+#quiz-fb{text-align:center;min-height:1.6em;margin-top:10px;font-weight:600}
+#quiz-hint{background:#3a2a12;border:1px solid #7a5512;color:#ffd99a;border-radius:10px;padding:8px 10px;margin-top:10px;font-size:.92rem}
+.dex{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.dex-card{background:#2a2e37;border-radius:10px;padding:8px 4px;text-align:center;min-height:96px}
+.dex-card .c{font-size:34px;line-height:1.2}
+.dex-card .m{font-size:.8rem;color:#ddd}
+.dex-card .r{font-size:.72rem;color:#aaa}
+.dex-card.lock{opacity:.55}
+.dex-card.lock .c{color:#888}
+.dex-card.got{cursor:pointer}
+.dex-card .by{font-size:.7rem;color:#ffd400}
+.dex-card.mate{outline:2px solid #3a6ea8}
+#hud-team{font-size:.78rem;color:#ffd400}
+.end-list{list-style:none;padding:0;margin:8px 0}
+.end-list li{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #2f333d;cursor:pointer}
+.end-list .c{font-size:28px;min-width:48px;text-align:center}
+.end-list .miss{opacity:.5}
+.big-num{font-size:2.2rem;font-weight:800}
+.map-box{max-width:640px;padding:12px}
+#g-map{height:min(66vh,560px);border-radius:10px;margin-top:8px;background:#2a2e37;color:#ccc}
+#g-map .map-fail{color:#ccc}
+.map-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:#c9ccd3;margin-top:8px}
+.lg{display:inline-flex;align-items:center;gap:5px}
+.lg i{display:inline-block;width:12px;height:12px;border-radius:50%}
+.gm-pin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:17px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);line-height:1}
+.gm-pin.got{background:#2e7d4f;color:#fff}
+.gm-pin.unk{background:#6b6f78;color:#fff;font-family:sans-serif;font-weight:700}
+.gm-q{color:#fff;font:800 22px sans-serif;text-shadow:0 0 3px #000,0 0 3px #000,0 0 6px #000;text-align:center;line-height:28px}
+#g-toast{position:absolute;left:50%;top:calc(90px + env(safe-area-inset-top));transform:translateX(-50%);z-index:30;background:rgba(30,77,51,.95);color:#fff;padding:9px 16px;border-radius:12px;font-size:.95rem;max-width:88vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+
+<!-- ================= 교사용 편집기 ================= -->
+<div id="builder" class="mode-walk" hidden>
+  <header class="b-head">
+    <h1>한자 찾기 AR · 게임 만들기</h1>
+    <p>찾을 한자와 숨길 자리를 정하면, 학생에게 보낼 링크와 QR 코드를 만들어 줍니다.</p>
+    <div class="row">
+      <label style="flex:2 1 220px">내 게임<select id="b-game-sel"></select></label>
+      <button id="b-new">+ 새 게임</button>
+      <button id="b-dup">복제</button>
+      <button id="b-del" class="del">삭제</button>
+    </div>
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;color:var(--muted);font-size:.9rem">다른 게임 불러오기 (링크·백업 파일)</summary>
+      <div class="row" style="margin-top:6px">
+        <label style="flex:3 1 260px">게임 링크 붙여넣기<input id="b-link-in" placeholder="https://…#g=…"></label>
+        <button id="b-link-load">불러오기</button>
+        <button id="b-restore">백업 파일(.json)</button>
+        <input id="b-restore-file" type="file" accept=".json,application/json" hidden>
+      </div>
+    </details>
+  </header>
+
+  <details class="card help" id="b-help">
+    <summary>처음이신가요? 사용 순서 보기</summary>
+    <ol>
+      <li><b>1. 기본 설정</b>에서 제목과 <b>찾는 방식</b>을 고릅니다.
+        <ul><li><b>걸어 다니며 찾기</b>: 운동장·교정의 실제 장소에 숨깁니다. 학생은 GPS로 그곳까지 걸어가서 잡습니다(실외).</li>
+        <li><b>제자리에서 둘러보며 찾기</b>: 학생 주위의 앞뒤·좌우·위아래에 숨깁니다. 학생은 선 자리에서 휴대폰을 돌리며 찾습니다(교실·실내, GPS 필요 없음).</li></ul></li>
+      <li><b>2. 한자 고르기</b>: 중학교·고등학교 900자 목록에서 누르거나 무작위로 뽑고, 직접 입력할 수도 있습니다.</li>
+      <li><b>3. 숨길 자리</b>: 걸어 다니며 찾기는 지도에서 찍거나 ‘흩뿌리기’로 한꺼번에, 제자리는 ‘고르게 펼치기’ 등으로 정합니다.</li>
+      <li><b>6. 학생에게 보내기</b>에서 <b>링크·QR 만들기</b>를 누르고, QR을 칠판 화면에 크게 띄우거나 링크를 보냅니다.</li>
+    </ol>
+    <p class="note"><b>준비는 한 번만</b> · 이 파일을 <code>index.html</code>이라는 이름으로 GitHub Pages 같은 https 주소에 한 번 올리고, 그 주소로 이 편집 화면을 엽니다. 그다음부터는 게임을 새로 만들어도 파일을 다시 올릴 필요 없이 링크·QR만 바꿔 주면 됩니다(게임 내용이 링크 안에 들어 있음). 파일을 컴퓨터에서 직접 열면 링크는 만들 수 있지만, 학생 링크의 앱 주소는 직접 적어야 합니다.</p>
+    <p class="note"><b>개인정보</b> · ‘학생 결과 모으기’를 쓰지 않으면 학생 이름과 기록은 학생 휴대폰에만 저장됩니다. 쓰면 선생님의 구글 시트로 이름·학번·찾은 한자·오답이 전송됩니다.</p>
+  </details>
+
+  <section class="card">
+    <h2>1. 기본 설정</h2>
+    <label>게임 제목<input id="b-title" maxlength="40" placeholder="예: 우리 학교 한자 찾기"></label>
+    <div style="margin-top:12px">
+      <label>학생이 어떻게 찾나요?</label>
+      <div class="seg" style="margin-top:4px">
+        <button id="b-mode-walk" aria-pressed="true"><b>🚶 걸어 다니며 찾기</b><span>실제 장소에 숨김 · GPS · 실외</span></button>
+        <button id="b-mode-spot" aria-pressed="false"><b>🔄 제자리에서 둘러보며 찾기</b><span>학생 주위에 숨김 · GPS 없음 · 교실</span></button>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <label>제한 시간(분, 0 = 없음)<input id="b-time" type="number" min="0" max="180" step="1"></label>
+      <label>오답 몇 번 뒤 힌트 표시<input id="b-hint" type="number" min="1" max="5" step="1"></label>
+      <label class="only-walk">새 한자의 기본 반경(m)<input id="b-radius" type="number" min="5" max="200" step="1"></label>
+      <label class="only-walk">학생 지도에 못 찾은 한자 표시
+        <select id="b-mapmode">
+          <option value="approx">대략적인 위치(?)로 표시</option>
+          <option value="exact">정확한 위치(?)로 표시</option>
+          <option value="found">찾은 한자와 내 위치만</option>
+          <option value="off">지도 메뉴 숨기기</option>
+        </select></label>
+      <label class="chk"><input id="b-guide" type="checkbox"> 방향 안내(레이더·화살표 문구)</label>
+      <label class="chk"><input id="b-camera" type="checkbox"> 카메라 화면 위에 한자 띄우기</label>
+    </div>
+    <p class="note">방향 안내를 끄면 찾기가 어려워집니다. 끄더라도 학생이 ‘쉬움’을 고르면 켜집니다.</p>
+  </section>
+
+  <section class="card">
+    <h2>2. 한자 고르기 <span style="font-weight:400;color:var(--muted)">(고른 한자 <span id="b-pick-count">0</span>자)</span></h2>
+    <div class="tabs">
+      <button data-tab="mid" aria-pressed="true">중학교 900자</button>
+      <button data-tab="high" aria-pressed="false">고등학교 900자</button>
+      <button data-tab="custom" aria-pressed="false">직접 입력</button>
+    </div>
+    <div id="b-pick-list">
+      <div class="row">
+        <label style="flex:2 1 200px">찾기 (한자나 훈음)<input id="b-pick-search" placeholder="예: 學 / 배울 / 학"></label>
+        <label style="flex:0 1 110px">무작위로<input id="b-rand-n" type="number" min="1" max="60" value="10"></label>
+        <button id="b-rand-btn">자 뽑기</button>
+        <button id="b-pick-clear" class="del">모두 빼기</button>
+      </div>
+      <div class="hz-grid" id="b-pick-grid"></div>
+      <p class="note">누르면 넣고, 한 번 더 누르면 뺍니다. 훈음은 한자 채집기(kkalssak-gif/hanja)에 정리된 목록을 따릅니다. 넣은 뒤 아래 한자 목록에서 고칠 수 있습니다.</p>
+    </div>
+    <div id="b-pick-custom" hidden>
+      <div class="row">
+        <label style="flex:0 1 110px">한자<input id="b-c-char" class="han" maxlength="4" placeholder="學" style="font-size:1.3rem;text-align:center"></label>
+        <label style="flex:2 1 200px">훈음<input id="b-c-mean" maxlength="30" placeholder="배울 학"></label>
+        <button id="b-c-add" class="primary">추가</button>
+      </div>
+      <p class="note">4자까지 넣을 수 있어 한자어·성어 찾기로도 쓸 수 있습니다.</p>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;color:var(--muted)">스프레드시트에서 한꺼번에 붙여넣기</summary>
+        <p class="note">엑셀·구글 시트에서 아래 순서의 열을 복사해 붙여넣으세요(첫 줄이 ‘한자’로 시작하면 제목 줄로 보고 건너뜁니다). 한자·훈음 외에는 비워도 됩니다.<br>
+        <code>한자 | 훈음 | 위도 | 경도 | 반경 | 부수 | 힌트 | 오답1 | 오답2 | 오답3</code></p>
+        <textarea id="b-bulk" placeholder="學	배울 학	36.6283	127.4561	15	子	학교의 '학'"></textarea>
+        <div class="b-actions"><button id="b-bulk-btn">목록에 추가</button></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card only-walk">
+    <h2>3. 지도에 숨기기</h2>
+    <div class="row">
+      <label style="flex:3 1 240px">장소 검색(학교 이름·주소) 또는 좌표<input id="b-search" placeholder="예: 복대중학교 / 36.6283, 127.4561"></label>
+      <button id="b-search-btn">검색</button>
+      <button id="b-gohere">📍 내 위치로</button>
+    </div>
+    <div id="b-search-results"></div>
+    <div id="b-place-banner" hidden><span id="b-place-text"></span><button id="b-place-cancel">취소</button></div>
+    <div id="b-map"></div>
+    <p class="note">지도를 누르면 그 자리에 새 한자를 추가할 수 있습니다. 핀은 끌어서 옮길 수 있고, 핀을 누르면 아래 목록에서 해당 한자로 이동합니다.</p>
+    <h3>한꺼번에 놓기</h3>
+    <div class="row">
+      <label style="flex:0 1 160px">지도 가운데에서 반경(m)<input id="b-scatter-range" type="number" min="10" max="500" value="60"></label>
+      <button id="b-scatter-btn">위치 없는 한자 흩뿌리기</button>
+      <button id="b-unplace-btn" class="del">놓은 위치 모두 지우기</button>
+    </div>
+    <p class="note">지도를 운동장 가운데로 옮긴 뒤 누르세요. 한자끼리 겹치지 않게 무작위로 놓고, 핀을 끌어 다듬으면 됩니다.</p>
+  </section>
+
+  <section class="card only-spot">
+    <h2>3. 학생 주위에 숨기기</h2>
+    <p class="note" style="margin-top:0">학생이 처음 바라본 쪽이 <b>정면(0°)</b>입니다. 오른쪽으로 돌수록 90°(오른쪽), 180°(뒤), 270°(왼쪽)입니다. 높이는 위·정면·아래 세 가지입니다.</p>
+    <div class="b-actions">
+      <button id="b-spread-even">고르게 펼치기</button>
+      <button id="b-spread-rand">무작위로 흩기</button>
+      <label class="chk" style="margin:0"><input id="b-mix-elev" type="checkbox"> 위·정면·아래 높이도 섞기</label>
+    </div>
+    <h3>휴대폰으로 직접 놓기</h3>
+    <div class="b-actions">
+      <button id="b-phone-on">휴대폰 방향 켜기</button>
+      <button id="b-phone-front" hidden>지금 보는 쪽을 정면으로</button>
+      <span id="b-phone-status" class="note"></span>
+    </div>
+    <p class="note">휴대폰으로 이 화면을 열고 방향을 켠 뒤, 교실에서 한자를 둘 쪽을 바라보고 아래 목록의 ‘지금 보는 쪽에 놓기’를 누르세요.</p>
+    <canvas id="b-spot-canvas" width="560" height="560" aria-label="학생 주위 한자 배치 미리보기"></canvas>
+  </section>
+
+  <section class="card">
+    <h2>4. 한자 목록 (<span id="b-count">0</span>개)</h2>
+    <div class="sel-bar" id="b-sel-bar" hidden>
+      <label class="chk" style="margin:0"><input id="b-sel-all" type="checkbox"> 전체 선택</label>
+      <span class="note" id="b-sel-count" style="margin:0">선택한 한자 없음</span>
+      <button id="b-sel-del" class="del" disabled>선택한 한자 빼기</button>
+    </div>
+    <div id="b-items"></div>
+    <div class="b-actions"><button id="b-add">+ 빈 칸 추가</button></div>
+  </section>
+
+  <section class="card">
+    <h2>5. 학생 결과 모으기 <span style="font-weight:400;color:var(--muted);font-size:.9rem">(선택)</span></h2>
+    <p class="note" style="margin-top:0">비워 두면 학생 이름만 받고 기록은 학생 휴대폰에만 남습니다. 결과 수집 주소를 넣으면 시작할 때 이름·학번과 개인정보 동의를 받고, 찾은 한자·오답·힌트 기록을 선생님의 구글 시트로 보냅니다.</p>
+    <div class="row">
+      <label style="flex:3 1 260px">결과 수집 주소 (앱스 스크립트 웹 앱 주소)<input id="b-gas" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false"></label>
+      <button id="b-gas-test">연결 확인</button>
+    </div>
+    <div id="b-gas-msg" class="note"></div>
+    <label style="margin-top:10px">학생에게 보여 줄 개인정보 동의 문구<textarea id="b-consent" class="plain"></textarea></label>
+    <div class="b-actions"><button id="b-consent-reset">기본 문구로 되돌리기</button><button id="b-codegs">Code.gs 내려받기</button></div>
+    <h3>모둠으로 함께 모으기</h3>
+    <div class="row">
+      <label class="chk" style="flex:2 1 260px;margin-top:0"><input id="b-team" type="checkbox"> 친구와 한 모둠이 되어 한자를 함께 모으기</label>
+      <label style="flex:1 1 140px">모둠 최대 인원<input id="b-team-max" type="number" min="2" max="10" step="1"></label>
+    </div>
+    <p class="note" id="b-team-note">켜면 학생이 시작할 때 모둠 이름을 적습니다. 같은 모둠 이름을 적은 친구들이 잡은 한자는 모두의 목록에 함께 채워지고, 모둠이 다 모으면 함께 끝납니다. 정한 인원이 차면 그 모둠에는 더 들어갈 수 없습니다. 결과 수집 주소가 있어야 동작하며, 이전 판 Code.gs를 쓰고 있다면 새 Code.gs로 바꿔 ‘새 버전’으로 배포해야 합니다.</p>
+    <details class="help" style="margin-top:10px">
+      <summary>결과 수집 주소 만드는 법 (처음 한 번)</summary>
+      <ol>
+        <li>구글 드라이브에서 <b>새 구글 시트</b>를 만들고, 메뉴 <b>확장 프로그램 → Apps Script</b>를 엽니다.</li>
+        <li>위의 <b>Code.gs 내려받기</b>로 받은 파일 내용을 편집기에 전부 붙여 넣습니다(원래 있던 내용은 지움).</li>
+        <li>맨 위 <code>TEACHER_KEY</code>의 값을 선생님만 아는 비밀번호로 바꾸고 저장합니다.</li>
+        <li>오른쪽 위 <b>배포 → 새 배포</b> → 유형 <b>웹 앱</b> → 실행 사용자 <b>나</b>, 액세스 권한 <b>모든 사용자</b> → 배포. 처음에는 권한 허용 창이 뜹니다.</li>
+        <li>나온 <b>웹 앱 주소</b>(…/exec로 끝남)를 위 칸에 붙여 넣고 <b>연결 확인</b>을 누릅니다.</li>
+      </ol>
+      <p class="note">Code.gs를 고친 뒤에는 <b>배포 → 배포 관리 → 연필(수정) → 버전: 새 버전 → 배포</b>로 올려야 주소가 바뀌지 않습니다. ‘새 배포’를 누르면 주소가 바뀌어 학생 링크를 다시 만들어야 합니다.</p>
+      <p class="note">학생 기록은 시트의 ‘기록’ 탭에 쌓입니다. 학년말 등 보유 기간이 끝나면 시트의 행을 직접 지워 주세요.</p>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>6. 확인하고 학생에게 보내기</h2>
+    <div id="b-check"></div>
+    <label style="margin-top:10px">학생이 접속할 앱 주소 (이 파일을 올린 https 주소)<input id="b-appurl" placeholder="https://내아이디.github.io/hanja/" spellcheck="false"></label>
+    <div class="b-actions">
+      <button id="b-make-link" class="primary">🔗 링크·QR 만들기</button>
+      <button id="b-preview">▶ 미리 해 보기</button>
+    </div>
+    <div id="b-link-box" hidden>
+      <div class="row">
+        <label style="flex:3 1 260px">게임 링크<input id="b-link" readonly></label>
+        <button id="b-link-copy">복사</button>
+        <button id="b-qr-big">QR 크게 띄우기</button>
+      </div>
+      <div id="b-link-len" class="note"></div>
+      <div id="b-qr"></div>
+      <p class="note">게임 내용을 고쳤다면 링크·QR을 다시 만들어 학생에게 새로 주세요. 같은 게임이라 학생이 찾은 기록은 이어집니다.</p>
+    </div>
+    <h3>그 밖의 방법</h3>
+    <div class="b-actions">
+      <button id="b-export">⬇ 게임 파일(index.html)로 내려받기</button>
+      <button id="b-backup">백업 저장(.json)</button>
+    </div>
+    <p class="note">게임 파일로 내려받으면 게임이 파일 안에 들어갑니다. 게임마다 따로 https 주소에 올리고 싶을 때 씁니다. 입력 내용은 이 브라우저에 자동 저장되며, 다른 컴퓨터로 옮기려면 백업 파일이나 링크를 쓰세요.</p>
+  </section>
+
+  <section class="card">
+    <h2>7. 학생 결과 보기</h2>
+    <div class="row">
+      <label style="flex:3 1 260px">결과 수집 주소<input id="b-r-gas" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <label style="flex:1 1 160px">교사 비밀번호 (Code.gs의 TEACHER_KEY)<input id="b-r-key" type="password" autocomplete="off"></label>
+      <button id="b-r-load" class="primary">결과 불러오기</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label style="flex:2 1 220px">게임<select id="b-r-game"></select></label>
+      <label class="chk" style="flex:1 1 180px"><input id="b-r-pv" type="checkbox"> 미리보기 기록도 보기</label>
+    </div>
+    <div id="b-r-msg" class="note"></div>
+    <div id="b-r-out"></div>
+  </section>
+
+  <div id="b-qr-modal" class="qr-modal" hidden>
+    <h2 id="b-qr-modal-title"></h2>
+    <div id="b-qr-modal-box"></div>
+    <button id="b-qr-close">닫기</button>
+  </div>
+  <div id="b-toast" hidden></div>
+</div>
+
+<!-- ================= 학생용 게임 ================= -->
+<div id="game" hidden>
+  <section id="scr-err" class="screen" hidden>
+    <div class="panel">
+      <h1 class="g-title" style="font-size:1.35rem">게임을 열 수 없어요</h1>
+      <p class="g-sub" id="err-msg">링크가 잘렸거나 올바르지 않습니다. 선생님께 링크를 다시 받아 주세요.</p>
+    </div>
+  </section>
+
+  <section id="scr-start" class="screen" hidden>
+    <div class="panel">
+      <h1 class="g-title" id="st-title"></h1>
+      <p class="g-sub" id="st-sub"></p>
+      <div id="st-insecure" class="g-warn" hidden>이 페이지가 https 주소가 아니어서 위치·나침반이 동작하지 않을 수 있습니다. 선생님께 알려 주세요.</div>
+      <div class="g-box">
+        <h3>이렇게 해요</h3>
+        <div class="g-small" style="color:#c9ccd3" id="st-howto"></div>
+      </div>
+      <div class="g-box">
+        <h3>난이도</h3>
+        <div class="g-seg">
+          <button id="st-diff-easy" aria-pressed="false"><b>쉬움</b><span>방향 안내가 켜지고 잡기 쉬워요</span></button>
+          <button id="st-diff-normal" aria-pressed="true"><b>보통</b><span>선생님이 정한 대로</span></button>
+        </div>
+      </div>
+      <label style="color:#b9bcc4">이름
+        <input id="st-name" maxlength="20" placeholder="예: 홍길동" autocomplete="off">
+      </label>
+      <label style="color:#b9bcc4;margin-top:8px" id="st-no-wrap" hidden>학번 (또는 반·번호)
+        <input id="st-no" maxlength="12" placeholder="예: 20315" autocomplete="off" inputmode="numeric">
+      </label>
+      <label style="color:#b9bcc4;margin-top:8px" id="st-team-wrap" hidden><span id="st-team-label">모둠 이름</span>
+        <input id="st-team" maxlength="20" placeholder="예: 1모둠" autocomplete="off">
+      </label>
+      <p class="g-small" id="st-team-note" hidden></p>
+      <div id="st-consent-box" hidden>
+        <div class="consent" id="st-consent-text"></div>
+        <label class="consent-row"><input type="checkbox" id="st-agree"> 위 내용에 동의합니다</label>
+      </div>
+      <p class="g-small" id="st-privacy"></p>
+      <div class="g-btns">
+        <button id="st-resume" class="primary" hidden>이어서 하기</button>
+        <button id="st-new" class="primary" disabled>시작하기</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-perm" class="screen" hidden>
+    <div class="panel">
+      <h1 class="g-title" style="font-size:1.35rem">휴대폰 기능 허용</h1>
+      <p class="g-sub">한자를 찾으려면 아래 기능이 필요해요.</p>
+      <div class="g-box" id="pm-geo-box">
+        <div class="perm"><b>📍 위치 (필수)</b><span class="badge" id="pm-geo-badge">대기</span></div>
+        <div class="perm-msg" id="pm-geo-msg">내가 한자와 얼마나 가까운지 알기 위해 필요해요.</div>
+        <div class="g-btns" style="margin-top:8px"><button id="pm-geo-btn">위치 허용하기</button></div>
+      </div>
+      <div class="g-box">
+        <div class="perm"><b>🧭 휴대폰 방향</b><span class="badge" id="pm-cmp-badge">대기</span></div>
+        <div class="perm-msg" id="pm-cmp-msg"></div>
+        <div class="g-btns" style="margin-top:8px"><button id="pm-cmp-btn" hidden>방향 허용하기</button></div>
+      </div>
+      <div class="g-box" id="pm-cam-box">
+        <div class="perm"><b>📷 카메라 (선택)</b><span class="badge" id="pm-cam-badge">꺼짐</span></div>
+        <div class="perm-msg" id="pm-cam-msg">카메라 화면 위에 한자가 떠 보여요. 켜지 않아도 게임은 할 수 있어요.</div>
+        <div class="g-btns" style="margin-top:8px"><button id="pm-cam-btn">카메라 켜기</button></div>
+      </div>
+      <div class="g-btns">
+        <button id="pm-go" class="primary" disabled>게임 시작</button>
+        <button id="pm-back">뒤로</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scr-play" class="screen play" hidden>
+    <video id="cam" playsinline muted autoplay></video>
+    <div id="cam-bg"></div>
+    <div id="drag-pad" hidden></div>
+    <div id="aim" hidden></div>
+    <div id="ar-layer"></div>
+    <header id="hud">
+      <div class="hud-l"><div id="hud-title"></div><div id="hud-prog">0 / 0</div><div id="hud-team" hidden></div></div>
+      <div class="hud-r"><div id="hud-timer"></div><div id="hud-gps">GPS 찾는 중</div></div>
+    </header>
+    <div id="spot-tools" hidden>
+      <button id="btn-front">↺ 지금 보는 쪽을 정면으로</button>
+      <button id="btn-drag" aria-pressed="false">✋ 손가락으로 둘러보기</button>
+    </div>
+    <div id="preview-banner" hidden>미리보기 모드 · 기록은 실제 게임과 따로 저장돼요</div>
+    <div id="nearest"><span>위치를 찾는 중…</span></div>
+    <canvas id="radar" width="232" height="232"></canvas>
+    <div id="play-btns">
+      <button id="btn-dex">📖 목록</button>
+      <button id="btn-map">🗺 지도</button>
+      <button id="btn-capture" class="primary" disabled>포획하기</button>
+      <button id="btn-quit">그만하기</button>
+    </div>
+    <button id="dbg-toggle" hidden>🛠 테스트</button>
+    <div id="dbg" hidden>
+      <b>테스트 도구</b> <span class="g-small">(미리보기 또는 주소에 ?debug 를 붙였을 때만 보여요)</span>
+      <label><input type="checkbox" id="dbg-head-on" style="width:auto"> 방향을 직접 정하기: <span id="dbg-head-val">0</span>°
+        <input type="range" id="dbg-head" min="0" max="359" value="0"></label>
+      <label class="dbg-spot"><input type="checkbox" id="dbg-pitch-on" style="width:auto"> 위아래 기울기: <span id="dbg-pitch-val">0</span>°
+        <input type="range" id="dbg-pitch" min="-60" max="60" value="0"></label>
+      <label class="dbg-walk">가상 위치
+        <select id="dbg-pos"><option value="">실제 GPS 사용</option></select></label>
+      <label class="dbg-walk"><input type="checkbox" id="dbg-force" style="width:auto"> 항상 범위 안으로 취급</label>
+      <div class="g-btns" style="margin-top:6px"><button id="dbg-close">닫기</button></div>
+    </div>
+    <div id="g-toast" hidden></div>
+  </section>
+
+  <section id="scr-end" class="screen" hidden>
+    <div class="panel">
+      <h1 class="g-title" id="end-title">완료!</h1>
+      <p class="g-sub" id="end-sub"></p>
+      <div class="g-box" style="display:flex;justify-content:space-around;text-align:center">
+        <div><div class="big-num" id="end-count">0</div><div class="g-small" id="end-count-label">찾은 한자</div></div>
+        <div><div class="big-num" id="end-score">0</div><div class="g-small">점수</div></div>
+        <div><div class="big-num" id="end-time" style="font-size:1.6rem;line-height:2.75rem">0:00</div><div class="g-small">걸린 시간</div></div>
+      </div>
+      <p class="g-small" style="text-align:center" id="end-note">이 화면을 선생님께 보여 주세요.</p>
+      <div class="g-box" id="end-team" hidden></div>
+      <div class="g-btns" style="margin-top:6px"><button id="end-review" class="primary" hidden>틀린 한자 복습하기</button></div>
+      <div class="g-box"><h3>한자 목록 <span class="g-small">(누르면 소리로 들려줘요)</span></h3><ul class="end-list" id="end-list"></ul></div>
+      <div class="g-btns"><button id="end-restart">기록 지우고 다시 하기</button></div>
+    </div>
+  </section>
+
+  <div id="quiz" class="modal" hidden>
+    <div class="modal-box">
+      <div id="quiz-title"></div>
+      <div class="quiz-char han" id="quiz-char"></div>
+      <div class="quiz-q">이 한자의 훈음(뜻과 음)은?</div>
+      <div class="quiz-opts" id="quiz-opts"></div>
+      <div id="quiz-fb"></div>
+      <div id="quiz-hint" hidden></div>
+      <div class="g-btns">
+        <button id="quiz-say" hidden>🔊 소리 듣기</button>
+        <button id="quiz-next" class="primary" hidden>계속 찾기</button>
+        <button id="quiz-close">나중에 풀기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tu" class="modal" hidden>
+    <div class="modal-box" style="text-align:center">
+      <h2 style="margin:4px 0 6px">⏱ 시간이 다 됐어요</h2>
+      <p class="g-small" id="tu-msg"></p>
+      <div class="g-btns"><button id="tu-more" class="primary">5분 더 하기</button><button id="tu-end">여기까지 끝내기</button></div>
+    </div>
+  </div>
+
+  <div id="mapm" class="modal" hidden>
+    <div class="modal-box map-box">
+      <div class="perm"><b id="map-head">지도</b><span><button id="map-me" style="padding:5px 10px">내 위치</button> <button id="map-close" style="padding:5px 12px">닫기</button></span></div>
+      <div id="g-map"></div>
+      <div class="map-legend" id="map-legend"></div>
+    </div>
+  </div>
+
+  <div id="dexm" class="modal" hidden>
+    <div class="modal-box">
+      <div class="perm"><b id="dex-head">한자 목록</b><button id="dex-close" style="padding:5px 12px">닫기</button></div>
+      <div class="dex" id="dex-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="game-data">null</script>
+
+<script>
+(function(){
+'use strict';
+/* 중·고 기초한자 각 900자와 훈음: '한자 채집기'(github.com/kkalssak-gif/hanja, 2026-11-04 판)에 정리된 목록을 그대로 가져옴 */
+const HANJA_DATA = {"mid":[["家","집 가"],["佳","아름다울 가"],["街","거리 가"],["可","옳을 가"],["歌","노래 가"],["加","더할 가"],["價","값 가"],["假","거짓 가"],["各","각각 각"],["角","뿔 각"],["脚","다리 각"],["干","방패 간"],["間","사이 간"],["看","볼 간"],["渴","목마를 갈"],["甘","달 감"],["減","덜 감"],["感","느낄 감"],["敢","감히 감"],["甲","갑옷 갑"],["江","강 강"],["降","내릴 강"],["講","익힐 강"],["強","굳셀 강"],["改","고칠 개"],["皆","다 개"],["個","낱 개"],["開","열 개"],["客","손님 객"],["更","다시 갱"],["去","갈 거"],["巨","클 거"],["居","살 거"],["車","수레 거"],["擧","들 거"],["建","세울 건"],["乾","하늘 건"],["犬","개 견"],["見","볼 견"],["堅","굳을 견"],["決","결단할 결"],["結","맺을 결"],["潔","깨끗할 결"],["京","서울 경"],["景","볕 경"],["輕","가벼울 경"],["經","지날/글 경"],["庚","별 경"],["耕","밭 갈 경"],["敬","공경할 경"],["驚","놀랄 경"],["慶","경사 경"],["競","겨룰 경"],["癸","북방 계"],["季","계절 계"],["界","지경 계"],["計","셀 계"],["溪","시내 계"],["鷄","닭 계"],["古","옛 고"],["故","옛 고"],["固","굳을 고"],["苦","쓸 고"],["考","생각할 고"],["高","높을 고"],["告","알릴 고"],["谷","골 곡"],["曲","굽을 곡"],["穀","곡식 곡"],["困","곤할 곤"],["坤","땅 곤"],["骨","뼈 골"],["工","장인 공"],["功","공 공"],["空","빌 공"],["共","함께 공"],["公","공변될 공"],["果","열매 과"],["課","공부할/과정 과"],["科","과목 과"],["過","지날 과"],["官","벼슬 관"],["觀","볼 관"],["關","빗장 관"],["光","빛 광"],["廣","넓을 광"],["交","사귈 교"],["校","학교 교"],["橋","다리 교"],["敎","가르칠 교"],["九","아홉 구"],["口","입 구"],["求","구할 구"],["救","건질 구"],["究","연구할 구"],["久","오랠 구"],["句","글귀 구"],["舊","예 구"],["國","나라 국"],["君","임금 군"],["郡","고을 군"],["軍","군사 군"],["弓","활 궁"],["卷","책 권"],["權","권세 권"],["勸","권할 권"],["貴","귀할 귀"],["歸","돌아갈 귀"],["均","고를 균"],["極","다할 극"],["近","가까울 근"],["勤","부지런할 근"],["根","뿌리 근"],["金","쇠 금"],["今","이제 금"],["禁","금할 금"],["及","미칠 급"],["給","줄 급"],["急","급할 급"],["己","몸 기"],["記","기록할 기"],["起","일어날 기"],["其","그 기"],["期","기약할 기"],["基","터 기"],["氣","기운 기"],["技","재주 기"],["幾","기미 기"],["旣","이미 기"],["吉","길할 길"],["暖","따뜻할 난"],["難","어려울 난"],["南","남녘 남"],["男","사내 남"],["內","안 내"],["乃","이에 내"],["女","계집 녀"],["年","해 년"],["念","생각 념"],["怒","성낼 노"],["農","농사 농"],["能","능할 능"],["多","많을 다"],["丹","붉을 단"],["但","다만 단"],["單","홑 단"],["短","짧을 단"],["端","끝 단"],["達","통달할 달"],["談","말씀 담"],["答","대답 답"],["堂","집 당"],["當","마땅 당"],["大","큰 대"],["代","대신할 대"],["待","기다릴 대"],["對","대할 대"],["德","클 덕"],["刀","칼 도"],["到","이를 도"],["度","법도 도"],["道","길 도"],["島","섬 도"],["徒","무리 도"],["都","도읍 도"],["圖","그림 도"],["讀","읽을 독"],["獨","홀로 독"],["同","한가지 동"],["洞","골 동"],["童","아이 동"],["冬","겨울 동"],["東","동녘 동"],["動","움직일 동"],["斗","말 두"],["豆","콩 두"],["頭","머리 두"],["得","얻을 득"],["等","무리 등"],["登","오를 등"],["燈","등 등"],["落","떨어질 락"],["樂","즐길 락"],["卵","알 란"],["浪","물결 랑"],["郞","사내 랑"],["來","올 래"],["冷","찰 랭"],["良","어질 량"],["兩","두 량"],["量","헤아릴 량"],["涼","서늘할 량"],["旅","나그네 려"],["力","힘 력"],["歷","지날 력"],["連","잇닿을 련"],["練","익힐 련"],["列","벌일 렬"],["烈","세찰 렬"],["令","하여금/명령 령"],["領","거느릴 령"],["例","법식 례"],["禮","예도 례"],["路","길 로"],["露","이슬 로"],["老","늙을 로"],["勞","일할 로"],["綠","푸를 록"],["論","논할 론"],["料","헤아릴 료"],["柳","버들 류"],["留","머무를 류"],["流","흐를 류"],["六","여섯 륙"],["陸","뭍 륙"],["倫","인륜 륜"],["律","법 률"],["陵","언덕 릉"],["里","마을 리"],["理","다스릴 리"],["利","이로울 리"],["李","오얏 리"],["林","수풀 림"],["立","설 립"],["馬","말 마"],["莫","없을 막"],["萬","일만 만"],["晩","늦을 만"],["滿","찰 만"],["末","끝 말"],["亡","망할 망"],["忙","바쁠 망"],["忘","잊을 망"],["望","바랄 망"],["每","매양 매"],["買","살 매"],["賣","팔 매"],["妹","누이 매"],["麥","보리 맥"],["免","면할 면"],["勉","힘쓸 면"],["面","낯 면"],["眠","잘 면"],["名","이름 명"],["命","목숨 명"],["明","밝을 명"],["鳴","울 명"],["母","어미 모"],["毛","털 모"],["暮","저물 모"],["木","나무 목"],["目","눈 목"],["卯","토끼 묘"],["妙","묘할 묘"],["戊","다섯째 천간 무"],["茂","우거질 무"],["武","굳셀 무"],["務","힘쓸 무"],["無","없을 무"],["舞","춤출 무"],["墨","먹 묵"],["門","문 문"],["問","물을 문"],["聞","들을 문"],["文","글월 문"],["勿","말 물"],["物","물건 물"],["米","쌀 미"],["未","아닐 미"],["味","맛 미"],["美","아름다울 미"],["尾","꼬리 미"],["民","백성 민"],["密","빽빽할 밀"],["朴","성/순박할 박"],["反","돌아올/뒤집을 반"],["飯","밥 반"],["半","반 반"],["發","쏠 발"],["方","모 방"],["房","방 방"],["防","막을 방"],["放","놓을 방"],["訪","찾을 방"],["拜","절 배"],["杯","잔 배"],["白","흰 백"],["百","일백 백"],["番","차례 번"],["伐","칠 벌"],["凡","무릇 범"],["法","법 법"],["變","변할 변"],["別","나눌 별"],["丙","남녘 병"],["病","병 병"],["兵","병사 병"],["保","지킬 보"],["步","걸음 보"],["報","갚을 보"],["福","복 복"],["伏","엎드릴 복"],["服","옷 복"],["復","돌아올 복"],["本","근본/뿌리 본"],["奉","받들 봉"],["逢","만날 봉"],["夫","지아비 부"],["扶","도울 부"],["父","아비 부"],["富","부유할 부"],["部","떼 부"],["婦","며느리/아내 부"],["否","아닐 부"],["浮","뜰 부"],["北","북녘 북"],["分","나눌 분"],["不","아닐 불"],["佛","부처 불"],["朋","벗 붕"],["比","견줄 비"],["非","아닐 비"],["悲","슬플 비"],["飛","날 비"],["鼻","코 비"],["備","갖출 비"],["貧","가난할 빈"],["氷","얼음 빙"],["四","넉 사"],["巳","뱀 사"],["士","선비 사"],["仕","섬길 사"],["寺","절 사"],["史","사기 사"],["使","하여금/부릴 사"],["舍","집 사"],["射","쏠 사"],["謝","사례할 사"],["師","스승 사"],["死","죽을 사"],["私","사사로울 사"],["絲","실 사"],["思","생각할 사"],["事","일 사"],["山","뫼 산"],["產","낳을 산"],["散","흩어질 산"],["算","셀 산"],["殺","죽일 살"],["三","석 삼"],["上","위 상"],["尙","오히려 상"],["常","항상/떳떳할 상"],["賞","상줄 상"],["商","장사 상"],["相","서로 상"],["霜","서리 상"],["想","생각할 상"],["傷","상처 상"],["喪","잃을 상"],["色","빛 색"],["生","날 생"],["西","서녘 서"],["序","차례 서"],["書","쓸 서"],["暑","더울 서"],["石","돌 석"],["夕","저녁 석"],["昔","옛 석"],["惜","아낄 석"],["席","자리 석"],["先","먼저 선"],["仙","신선 선"],["線","줄 선"],["鮮","고울 선"],["善","착할 선"],["船","배 선"],["選","가릴 선"],["雪","눈 설"],["說","말씀 설"],["設","베풀 설"],["舌","혀 설"],["姓","성 성"],["性","성품 성"],["成","이룰 성"],["城","재 성"],["誠","정성 성"],["盛","성할 성"],["省","살필 성"],["星","별 성"],["聖","거룩할 성"],["聲","소리 성"],["世","대/인간 세"],["洗","씻을 세"],["稅","세금 세"],["細","가늘 세"],["勢","형세 세"],["歲","해 세"],["小","작을 소"],["少","적을 소"],["所","바 소"],["消","사라질 소"],["素","본디 소"],["笑","웃을 소"],["俗","풍속 속"],["速","빠를 속"],["續","이을 속"],["孫","손자 손"],["松","소나무 송"],["送","보낼 송"],["水","물 수"],["手","손 수"],["受","받을 수"],["授","줄 수"],["首","머리 수"],["守","지킬 수"],["收","거둘 수"],["誰","누구 수"],["須","모름지기 수"],["雖","비록 수"],["愁","시름 수"],["樹","나무 수"],["壽","목숨 수"],["數","셀 수"],["修","닦을 수"],["秀","빼어날 수"],["叔","아저씨 숙"],["淑","맑을 숙"],["宿","잘 숙"],["順","순할 순"],["純","순수할 순"],["戌","개 술"],["崇","높을 숭"],["習","익힐 습"],["拾","주울 습"],["乘","탈 승"],["承","이을/받들 승"],["勝","이길/뛰어날 승"],["市","저자 시"],["示","보일 시"],["是","옳을 시"],["時","때 시"],["詩","시 시"],["視","볼 시"],["施","베풀 시"],["試","시험 시"],["始","비로소 시"],["氏","성씨 씨"],["食","먹을 식"],["式","법 식"],["植","심을 식"],["識","알 식"],["身","몸 신"],["申","거듭 신"],["神","귀신 신"],["臣","신하 신"],["信","믿을 신"],["辛","매울/괴로울 신"],["新","새 신"],["失","잃을 실"],["室","집 실"],["實","열매 실"],["心","마음 심"],["甚","심할 심"],["深","깊을 심"],["十","열 십"],["兒","아이 아"],["我","나 아"],["惡","나쁠 악"],["安","편안할 안"],["案","책상/안건 안"],["顔","얼굴 안"],["眼","눈 안"],["暗","어두울 암"],["巖","바위 암"],["仰","우러를 앙"],["愛","사랑 애"],["哀","슬플 애"],["也","어조사 야"],["夜","밤 야"],["野","들 야"],["弱","약할 약"],["若","같을 약"],["約","맺을 약"],["藥","약 약"],["羊","양 양"],["洋","큰 바다 양"],["養","기를 양"],["揚","날릴 양"],["陽","볕 양"],["讓","사양할 양"],["魚","물고기 어"],["漁","고기 잡을 어"],["於","어조사 어"],["語","말씀 어"],["億","억 억"],["憶","생각할 억"],["言","말씀 언"],["嚴","엄할 엄"],["業","일 업"],["余","나 여"],["餘","남을 여"],["如","같을 여"],["汝","너 여"],["與","줄 여"],["亦","또 역"],["易","바꿀 역"],["逆","거스를 역"],["然","그러할 연"],["煙","연기 연"],["硏","갈 연"],["熱","더울 열"],["悅","기쁠 열"],["炎","불꽃 염"],["葉","잎 엽"],["永","길 영"],["英","꽃부리 영"],["迎","맞을 영"],["榮","영화로울 영"],["藝","재주 예"],["五","다섯 오"],["吾","나 오"],["悟","깨달을 오"],["午","낮 오"],["誤","그르칠 오"],["烏","까마귀 오"],["玉","구슬 옥"],["屋","집 옥"],["瓦","기와 와"],["臥","누울 와"],["完","완전할 완"],["曰","가로 왈"],["王","임금 왕"],["往","갈 왕"],["外","바깥 외"],["要","요긴할 요"],["欲","하고자 할 욕"],["浴","목욕할 욕"],["用","쓸 용"],["容","얼굴 용"],["勇","날랠 용"],["于","어조사 우"],["宇","집 우"],["右","오른 우"],["友","벗 우"],["牛","소 우"],["雨","비 우"],["憂","근심 우"],["又","또 우"],["尤","더욱 우"],["遇","만날 우"],["云","이를 운"],["雲","구름 운"],["運","옮길 운"],["雄","수컷 웅"],["元","으뜸 원"],["原","언덕 원"],["願","원할 원"],["遠","멀 원"],["園","동산 원"],["怨","원망할 원"],["圓","둥글 원"],["月","달 월"],["位","자리 위"],["危","위태할 위"],["爲","할 위"],["偉","클/훌륭할 위"],["威","위엄 위"],["由","말미암을 유"],["油","기름 유"],["酉","닭 유"],["有","있을 유"],["猶","오히려 유"],["唯","오직 유"],["遊","놀 유"],["柔","부드러울 유"],["遺","남길 유"],["幼","어릴 유"],["肉","고기 육"],["育","기를 육"],["恩","은혜 은"],["銀","은 은"],["乙","새 을"],["音","소리 음"],["吟","읊을 음"],["飮","마실 음"],["陰","그늘 음"],["邑","고을 읍"],["泣","울 읍"],["應","응할 응"],["衣","옷 의"],["依","의지할/기댈 의"],["義","옳을 의"],["議","의논할 의"],["矣","어조사 의"],["醫","의원 의"],["意","뜻 의"],["二","두 이"],["以","써 이"],["已","이미 이"],["耳","귀 이"],["而","말 이을 이"],["異","다를 이"],["移","옮길 이"],["益","더할 익"],["人","사람 인"],["引","끌 인"],["仁","어질 인"],["因","인할 인"],["忍","참을 인"],["認","알 인"],["寅","범 인"],["印","도장 인"],["一","한 일"],["日","날 일"],["壬","북방 임"],["入","들 입"],["子","아들 자"],["字","글자 자"],["自","스스로 자"],["者","놈 자"],["姊","손윗누이 자"],["慈","사랑 자"],["作","지을 작"],["昨","어제 작"],["長","길 장"],["章","글 장"],["場","마당 장"],["將","장수/장차 장"],["壯","씩씩할 장"],["才","재주 재"],["材","재목 재"],["財","재물 재"],["在","있을 재"],["栽","심을 재"],["再","두 재"],["哉","비롯할/처음 재"],["爭","다툴 쟁"],["著","나타날 저"],["貯","쌓을 저"],["低","낮을 저"],["的","과녁 적"],["赤","붉을 적"],["適","맞을 적"],["敵","대적할/적 적"],["田","밭 전"],["全","온전할 전"],["典","법 전"],["前","앞 전"],["展","펼 전"],["戰","싸울 전"],["電","번개 전"],["錢","돈 전"],["傳","전할 전"],["節","마디 절"],["絕","끊을/그만둘 절"],["店","가게 점"],["接","이을/접할 접"],["丁","고무래 정"],["停","머무를 정"],["頂","정수리 정"],["井","우물 정"],["正","바를 정"],["政","정사 정"],["定","정할 정"],["貞","곧을 정"],["精","정할 정"],["情","뜻 정"],["靜","고요할 정"],["淨","깨끗할 정"],["庭","뜰 정"],["弟","아우 제"],["第","차례 제"],["祭","제사 제"],["帝","임금 제"],["題","제목 제"],["除","덜 제"],["諸","모두 제"],["製","지을 제"],["兆","조 조"],["早","이를/일찍 조"],["造","지을 조"],["鳥","새 조"],["調","고를 조"],["朝","아침 조"],["助","도울 조"],["祖","할아버지 조"],["足","발 족"],["族","겨레 족"],["存","있을 존"],["尊","높을 존"],["卒","마칠/군사 졸"],["宗","마루 종"],["種","씨 종"],["鐘","쇠북 종"],["終","마칠 종"],["從","좇을 종"],["左","왼 좌"],["坐","앉을 좌"],["罪","허물 죄"],["主","주인 주"],["注","물댈 주"],["住","살 주"],["朱","붉을 주"],["宙","집 주"],["走","달릴 주"],["酒","술 주"],["晝","낮 주"],["竹","대 죽"],["中","가운데 중"],["重","무거울 중"],["衆","무리 중"],["卽","곧 즉"],["曾","일찍 증"],["增","더할 증"],["證","증거 증"],["只","다만 지"],["支","지탱할 지"],["枝","가지 지"],["止","그칠 지"],["之","갈 지"],["知","알 지"],["地","땅 지"],["指","손가락 지"],["志","뜻 지"],["至","이를 지"],["紙","종이 지"],["持","가질 지"],["直","곧을 직"],["辰","별 진"],["眞","참 진"],["進","나아갈 진"],["盡","다할 진"],["質","바탕 질"],["集","모을 집"],["執","잡을 집"],["且","또 차"],["次","버금 차"],["此","이 차"],["借","빌 차"],["着","붙을 착"],["察","살필 찰"],["參","참여할 참"],["昌","창성할 창"],["唱","노래 창"],["窓","창 창"],["菜","나물 채"],["採","캘 채"],["責","꾸짖을 책"],["冊","책 책"],["妻","아내 처"],["處","곳 처"],["尺","자 척"],["千","일천 천"],["天","하늘 천"],["川","내 천"],["泉","샘 천"],["淺","얕을 천"],["鐵","쇠 철"],["靑","푸를 청"],["淸","맑을 청"],["晴","갤 청"],["請","청할 청"],["聽","들을 청"],["體","몸 체"],["初","처음 초"],["草","풀 초"],["招","부를 초"],["寸","마디 촌"],["村","마을 촌"],["最","가장 최"],["秋","가을 추"],["追","쫓을 추"],["推","밀 추"],["丑","소 축"],["祝","빌 축"],["春","봄 춘"],["出","날 출"],["充","채울 충"],["忠","충성 충"],["蟲","벌레 충"],["取","가질 취"],["吹","불 취"],["就","나아갈/이룰 취"],["治","다스릴 치"],["致","이를 치"],["齒","이 치"],["則","법칙 칙"],["親","친할 친"],["七","일곱 칠"],["針","바늘 침"],["快","쾌할 쾌"],["他","다를 타"],["打","칠 타"],["脫","벗을 탈"],["探","찾을 탐"],["太","클 태"],["泰","클/편안할 태"],["宅","집 택"],["土","흙 토"],["通","통할 통"],["統","거느릴 통"],["退","물러날 퇴"],["投","던질 투"],["特","특별할/뛰어날 특"],["破","깨뜨릴 파"],["波","물결 파"],["判","판단할 판"],["八","여덟 팔"],["貝","조개 패"],["敗","패할 패"],["片","조각 편"],["便","편할 편"],["篇","책 편"],["平","평평할 평"],["閉","닫을 폐"],["布","베 포"],["抱","안을 포"],["暴","사나울/쬘 폭"],["表","겉 표"],["品","물건 품"],["風","바람 풍"],["豐","풍년 풍"],["皮","가죽 피"],["彼","저 피"],["必","반드시 필"],["匹","짝 필"],["筆","붓 필"],["下","아래 하"],["夏","여름 하"],["賀","하례 하"],["何","어찌 하"],["河","물 하"],["學","배울 학"],["閑","한가할 한"],["寒","찰 한"],["恨","한 한"],["限","한할 한"],["韓","한국/나라 이름 한"],["漢","한수/한나라 한"],["合","합할 합"],["恒","항상 항"],["害","해할 해"],["海","바다 해"],["亥","돼지 해"],["解","풀 해"],["行","다닐 행"],["幸","다행 행"],["向","향할 향"],["香","향기 향"],["鄕","시골 향"],["虛","빌 허"],["許","허락할 허"],["革","가죽/고칠 혁"],["現","나타날 현"],["賢","어질 현"],["血","피 혈"],["協","화합할/도울 협"],["兄","맏/형 형"],["刑","형벌 형"],["形","모양 형"],["惠","은혜 혜"],["戶","지게 호"],["乎","어조사 호"],["呼","부를 호"],["好","좋을 호"],["虎","범 호"],["號","부르짖을 호"],["湖","호수 호"],["或","혹 혹"],["婚","혼인할 혼"],["混","섞을 혼"],["紅","붉을 홍"],["火","불 화"],["化","될 화"],["花","꽃 화"],["貨","재화 화"],["和","화할 화"],["話","말씀 화"],["畫","그림 화"],["華","빛날 화"],["歡","기쁠 환"],["患","근심 환"],["活","살 활"],["黃","누를 황"],["皇","임금 황"],["回","돌 회"],["會","모일 회"],["孝","효도 효"],["效","본받을 효"],["後","뒤 후"],["厚","두터울 후"],["訓","가르칠 훈"],["休","쉴 휴"],["凶","흉할 흉"],["胸","가슴 흉"],["黑","검을 흑"],["興","일 흥"],["希","바랄 희"],["喜","기쁠 희"]],"high":[["架","시렁 가"],["暇","겨를 가"],["閣","누각 각"],["却","물리칠 각"],["覺","깨달을 각"],["刻","새길 각"],["刊","새길 간"],["肝","간 간"],["幹","줄기 간"],["簡","대쪽 간"],["姦","간음할 간"],["懇","간절할 간"],["監","볼 감"],["鑑","거울 감"],["康","편안할 강"],["剛","굳셀 강"],["鋼","강철 강"],["綱","벼리 강"],["介","낄 개"],["慨","슬퍼할 개"],["槪","대개 개"],["蓋","덮을 개"],["距","떨어질 거"],["拒","막을 거"],["據","의거할 거"],["件","물건 건"],["健","튼튼할 건"],["傑","뛰어날 걸"],["乞","빌 걸"],["儉","검소할 검"],["劍","칼 검"],["檢","검사할 검"],["格","격식 격"],["擊","칠 격"],["激","격할 격"],["隔","사이 뜰 격"],["肩","어깨 견"],["絹","비단 견"],["遣","보낼 견"],["牽","이끌 견"],["缺","이지러질 결"],["兼","겸할 겸"],["謙","겸손할 겸"],["竟","마침내 경"],["境","지경 경"],["鏡","거울 경"],["頃","이랑/잠깐 경"],["傾","기울 경"],["硬","굳을 경"],["警","깨우칠/경계할 경"],["徑","지름길 경"],["卿","벼슬 경"],["系","이을 계"],["係","맬 계"],["戒","경계할 계"],["械","기계 계"],["繼","이을 계"],["契","맺을 계"],["桂","계수나무 계"],["啓","열 계"],["階","섬돌 계"],["繫","맬 계"],["枯","마를 고"],["姑","시어미 고"],["庫","곳집 고"],["孤","외로울 고"],["鼓","북 고"],["稿","볏짚 고"],["顧","돌아볼 고"],["哭","울 곡"],["孔","구멍 공"],["供","이바지할 공"],["恭","공손할 공"],["攻","칠 공"],["恐","두려울 공"],["貢","바칠 공"],["誇","자랑할 과"],["寡","적을 과"],["郭","성곽 곽"],["館","집 관"],["管","대롱 관"],["貫","꿸 관"],["慣","익숙할 관"],["冠","갓 관"],["寬","너그러울 관"],["鑛","쇳돌 광"],["狂","미칠 광"],["掛","걸 괘"],["塊","흙덩이 괴"],["愧","부끄러울 괴"],["怪","기이할 괴"],["壞","무너질 괴"],["郊","들 교"],["較","견줄 교"],["巧","공교할 교"],["矯","바로잡을 교"],["具","갖출 구"],["俱","함께 구"],["區","구분할 구"],["驅","몰 구"],["苟","진실로 구"],["拘","잡을 구"],["狗","개 구"],["丘","언덕 구"],["懼","두려워할 구"],["龜","땅 이름 구"],["構","얽을 구"],["球","공 구"],["菊","국화 국"],["局","판 국"],["群","무리 군"],["屈","굽힐 굴"],["宮","집 궁"],["窮","다할 궁"],["拳","주먹 권"],["券","문서 권"],["厥","그 궐"],["軌","바퀴 자국 궤"],["鬼","귀신 귀"],["叫","부르짖을 규"],["規","법 규"],["糾","얽힐 규"],["菌","버섯 균"],["克","이길 극"],["劇","심할 극"],["斤","도끼 근"],["僅","겨우 근"],["謹","삼갈 근"],["錦","비단 금"],["禽","날짐승 금"],["琴","거문고 금"],["級","등급 급"],["肯","즐길 긍"],["紀","벼리 기"],["忌","꺼릴 기"],["旗","기 기"],["欺","속일 기"],["奇","기특할 기"],["騎","말 탈 기"],["寄","부칠 기"],["豈","어찌 기"],["棄","버릴 기"],["祈","빌 기"],["企","꾀할 기"],["畿","경기 기"],["飢","주릴 기"],["器","그릇 기"],["機","틀 기"],["緊","긴할 긴"],["那","어찌 나"],["諾","허락할 낙"],["納","들일/바칠 납"],["娘","아가씨 낭"],["奈","어찌 내"],["耐","견딜 내"],["寧","편안할 녕"],["奴","종 노"],["努","힘쓸 노"],["腦","골 뇌"],["惱","괴로워할 뇌"],["泥","진흙 니"],["茶","차 다"],["旦","아침 단"],["段","층계 단"],["壇","단 단"],["檀","박달나무 단"],["斷","끊을 단"],["團","둥글 단"],["淡","맑을 담"],["擔","멜 담"],["畓","논 답"],["踏","밟을 답"],["唐","당나라 당"],["糖","사탕 당"],["黨","무리 당"],["帶","띠 대"],["臺","대 대"],["貸","빌릴 대"],["隊","무리 대"],["倒","넘어질 도"],["挑","돋울 도"],["桃","복숭아 도"],["跳","뛸 도"],["逃","달아날 도"],["渡","건널 도"],["陶","질그릇 도"],["途","길 도"],["稻","벼 도"],["導","이끌 도"],["盜","훔칠 도"],["塗","칠할 도"],["毒","독 독"],["督","감독할 독"],["篤","도타울 독"],["豚","돼지 돈"],["敦","도타울 돈"],["突","갑자기 돌"],["銅","구리 동"],["凍","얼 동"],["鈍","무딜 둔"],["屯","진 칠 둔"],["騰","오를 등"],["羅","벌일 라"],["絡","이을 락"],["亂","어지러울 란"],["蘭","난초 란"],["欄","난간 란"],["覽","볼 람"],["濫","넘칠 람"],["廊","사랑채 랑"],["略","간략할/다스릴 략"],["掠","노략질할 략"],["梁","들보 량"],["糧","양식 량"],["諒","살필 량"],["麗","고울 려"],["慮","생각할 려"],["勵","힘쓸 려"],["曆","책력 력"],["鍊","불릴 련"],["憐","불쌍히 여길 련"],["聯","연이을 련"],["戀","그리워할/사모할 련"],["蓮","연 련"],["裂","찢을 렬"],["劣","못할 렬"],["廉","청렴할 렴"],["獵","사냥 렵"],["嶺","재 령"],["零","떨어질 령"],["靈","신령 령"],["隷","종 례"],["爐","화로 로"],["祿","녹 록"],["錄","기록할 록"],["鹿","사슴 록"],["弄","희롱할 롱"],["雷","우레 뢰"],["賴","의뢰할 뢰"],["了","마칠 료"],["僚","벗 료"],["龍","용 룡"],["屢","여러 루"],["樓","다락 루"],["累","묶을 루"],["淚","눈물 루"],["漏","샐 루"],["類","무리 류"],["輪","바퀴 륜"],["栗","밤 률"],["率","헤아릴 률"],["隆","높을 륭"],["梨","배나무 리"],["吏","벼슬아치 리"],["離","떠날 리"],["裏","속 리"],["履","밟을 리"],["鄰","이웃 린"],["臨","임할 림"],["麻","삼 마"],["磨","갈 마"],["幕","장막 막"],["漠","넓을/사막 막"],["漫","질펀할 만"],["慢","게으를/거만할 만"],["茫","아득할 망"],["妄","망령될 망"],["罔","그물 망"],["梅","매화 매"],["埋","묻을 매"],["媒","중매 매"],["脈","줄기 맥"],["孟","맏 맹"],["猛","사나울 맹"],["盟","맹세 맹"],["盲","눈멀 맹"],["綿","솜 면"],["滅","꺼질 멸"],["銘","새길 명"],["冥","어두울 명"],["某","아무개 모"],["謀","꾀 모"],["模","본뜰 모"],["貌","모양 모"],["募","모을 모"],["慕","그릴 모"],["侮","업신여길 모"],["冒","무릅쓸 모"],["牧","칠 목"],["睦","화목할 목"],["沒","빠질/없을 몰"],["夢","꿈 몽"],["蒙","입을 몽"],["苗","모 묘"],["廟","사당 묘"],["墓","무덤 묘"],["貿","무역할 무"],["霧","안개 무"],["默","잠잠할 묵"],["迷","미혹할 미"],["微","작을 미"],["眉","눈썹 미"],["敏","재빠를 민"],["憫","민망할 민"],["蜜","꿀 밀"],["泊","머무를 박"],["拍","칠 박"],["迫","핍박할/닥칠 박"],["博","넓을 박"],["薄","엷을 박"],["般","가지 반"],["盤","소반 반"],["班","나눌 반"],["返","돌이킬 반"],["叛","배반할 반"],["伴","짝 반"],["拔","뺄 발"],["髮","터럭 발"],["芳","꽃다울 방"],["傍","곁 방"],["妨","방해할 방"],["倣","본뜰 방"],["邦","나라 방"],["倍","곱 배"],["培","북돋을 배"],["配","나눌 배"],["排","밀칠 배"],["輩","무리 배"],["背","등 배"],["伯","맏 백"],["煩","번거로울 번"],["繁","번성할/복잡할 번"],["飜","번역할/날 번"],["罰","벌할 벌"],["犯","범할 범"],["範","법 범"],["壁","벽 벽"],["碧","푸를 벽"],["辯","말씀 변"],["辨","분별할 변"],["邊","가 변"],["竝","아우를 병"],["屛","병풍 병"],["普","넓을 보"],["譜","족보 보"],["補","기울/도울 보"],["寶","보배 보"],["腹","배 복"],["複","겹칠 복"],["卜","점 복"],["覆","다시 복"],["峯","봉우리 봉"],["蜂","벌 봉"],["封","봉할 봉"],["鳳","봉황새 봉"],["付","줄 부"],["符","부호 부"],["附","붙을 부"],["府","마을 부"],["腐","썩을 부"],["負","질 부"],["副","버금 부"],["簿","장부 부"],["赴","다다를 부"],["賦","부세 부"],["紛","어지러울 분"],["粉","가루 분"],["奔","달릴 분"],["墳","무덤 분"],["憤","분할 분"],["奮","떨칠 분"],["拂","떨칠 불"],["崩","무너질 붕"],["批","비평할 비"],["卑","낮을 비"],["婢","계집종 비"],["碑","돌기둥 비"],["妃","왕비 비"],["肥","살찔 비"],["祕","숨길 비"],["費","쓸 비"],["賓","손 빈"],["頻","자주 빈"],["聘","부를 빙"],["司","맡을 사"],["詞","말씀 사"],["蛇","뱀 사"],["捨","버릴 사"],["邪","간사할 사"],["賜","줄 사"],["斜","비낄 사"],["詐","속일 사"],["社","모일/토지신 사"],["沙","모래 사"],["似","닮을 사"],["査","조사할 사"],["寫","베낄 사"],["辭","말씀 사"],["斯","이 사"],["祀","제사 사"],["削","깎을 삭"],["朔","초하루 삭"],["嘗","맛볼 상"],["裳","치마 상"],["詳","자세할 상"],["祥","상서로울 상"],["床","상 상"],["象","코끼리 상"],["像","모양 상"],["桑","뽕나무 상"],["償","갚을 상"],["狀","형상 상"],["雙","두 쌍"],["塞","변방 새"],["索","찾을 색"],["敍","펼 서"],["徐","천천히 서"],["庶","여러 서"],["恕","용서할 서"],["緖","실마리 서"],["署","마을 서"],["誓","맹세할 서"],["逝","갈 서"],["析","쪼갤 석"],["釋","풀 석"],["宣","베풀 선"],["旋","돌 선"],["禪","선 선"],["涉","건널 섭"],["攝","다스릴/잡을 섭"],["召","부를 소"],["昭","밝을 소"],["蘇","깨어날 소"],["騷","떠들 소"],["燒","불사를 소"],["訴","호소할 소"],["掃","쓸 소"],["疏","트일 소"],["蔬","푸성귀 소"],["束","묶을 속"],["粟","조 속"],["屬","무리 속"],["損","덜다덜 손"],["訟","송사할 송"],["頌","칭송할 송"],["誦","외울 송"],["刷","인쇄할 쇄"],["鎖","쇠사슬 쇄"],["衰","쇠할 쇠"],["囚","가둘 수"],["需","쓰일 수"],["帥","장수 수"],["殊","다를 수"],["隨","따를 수"],["輸","보낼 수"],["獸","짐승 수"],["睡","잘 수"],["遂","드디어/따를 수"],["垂","드리울 수"],["搜","찾을 수"],["孰","누구 숙"],["熟","익을 숙"],["肅","엄숙할 숙"],["旬","열흘 순"],["殉","따라 죽을 순"],["循","돌 순"],["脣","입술 순"],["瞬","깜짝일 순"],["巡","돌아다닐 순"],["述","펼 술"],["術","재주 술"],["濕","젖을/축축할 습"],["襲","엄습할 습"],["昇","오를 승"],["僧","중 승"],["矢","화살 시"],["侍","모실 시"],["息","숨쉴 식"],["飾","꾸밀 식"],["伸","펴다 신"],["晨","새벽 신"],["愼","삼갈 신"],["尋","찾을 심"],["審","살필 심"],["牙","어금니 아"],["芽","싹 아"],["雅","맑을/우아할 아"],["亞","버금 아"],["餓","주릴 아"],["岳","큰 산 악"],["岸","언덕 안"],["雁","기러기 안"],["謁","뵐 알"],["壓","누를 압"],["押","누를/억압할 압"],["央","가운데 앙"],["殃","재앙 앙"],["涯","물가 애"],["厄","액 액"],["額","이마 액"],["耶","어조사 야"],["躍","뛸 약"],["壤","흙 양"],["樣","모양 양"],["楊","버들 양"],["御","어거할 어"],["抑","누를/억압할 억"],["焉","어찌 언"],["予","나 여"],["輿","수레 여"],["譯","풀/번역할 역"],["驛","역참 역"],["役","부릴 역"],["疫","전염병 역"],["域","지경 역"],["延","늘일 연"],["燃","탈 연"],["燕","제비 연"],["沿","따를 연"],["鉛","납 연"],["宴","잔치 연"],["軟","연할 연"],["演","펼 연"],["緣","인연 연"],["閱","볼/검열할 열"],["染","물들 염"],["鹽","소금 염"],["泳","헤엄칠 영"],["詠","읊을 영"],["營","경영할 영"],["影","그림자 영"],["映","비출 영"],["豫","미리 예"],["譽","기릴 예"],["銳","날카로울 예"],["汚","더러울 오"],["嗚","슬플/흐느낄 오"],["娛","즐길 오"],["傲","오만할 오"],["獄","옥 옥"],["溫","따뜻할 온"],["翁","늙은이 옹"],["擁","낄/안을 옹"],["緩","느릴/느슨할 완"],["畏","두려워할 외"],["腰","허리 요"],["搖","흔들 요"],["遙","멀 요"],["謠","노래 요"],["慾","욕심 욕"],["辱","욕될 욕"],["庸","떳떳할 용"],["羽","깃 우"],["郵","우편/역참 우"],["愚","어리석을 우"],["偶","짝 우"],["優","넉넉할 우"],["韻","운 운"],["員","인원/관원 원"],["源","근원 원"],["援","도울 원"],["院","집 원"],["越","넘을 월"],["胃","위장 위"],["謂","이를 위"],["圍","에워쌀 위"],["緯","씨 위"],["衛","지킬 위"],["違","어긋날/어길 위"],["委","맡길 위"],["慰","위로할 위"],["僞","거짓 위"],["幽","그윽할 유"],["惟","생각할 유"],["維","벼리 유"],["乳","젖 유"],["儒","선비 유"],["裕","넉넉할 유"],["誘","꾈 유"],["愈","나을 유"],["悠","멀 유"],["閏","윤달 윤"],["潤","불을/젖을/윤택할 윤"],["隱","숨을 은"],["淫","음란할 음"],["凝","엉길 응"],["宜","마땅 의"],["儀","거동 의"],["疑","의심할/믿지 앓을 의"],["夷","오랑캐 이"],["翼","날개 익"],["姻","혼인 인"],["逸","편안할 일"],["任","맡길 임"],["賃","품삯 임"],["玆","무성할 자"],["紫","자줏빛 자"],["資","재물 자"],["姿","맵시 자"],["恣","마음대로 자"],["刺","찌를 자"],["酌","따를 작"],["爵","벼슬 작"],["殘","잔인할 잔"],["潛","잠길 잠"],["暫","잠깐 잠"],["雜","섞일 잡"],["丈","어른 장"],["張","베풀 장"],["帳","장막 장"],["莊","엄할 장"],["裝","꾸밀 장"],["奬","장려할 장"],["墻","담 장"],["葬","장사지낼 장"],["粧","단장할 장"],["掌","손바닥 장"],["藏","감출 장"],["臟","오장 장"],["障","막을 장"],["腸","창자 장"],["災","재앙 재"],["裁","마를 재"],["載","실을 재"],["宰","재상 재"],["底","바닥 저"],["抵","막을 저"],["滴","물방울 적"],["摘","딸 적"],["寂","고요할 적"],["籍","서적 적"],["賊","도적 적"],["跡","발자취 적"],["蹟","자취 적"],["積","쌓을 적"],["績","길쌈할 적"],["專","오로지 전"],["轉","구를 전"],["殿","전각 전"],["切","끊을/벨 절"],["折","꺾을 절"],["竊","훔칠 절"],["占","차지할 점"],["點","점 점"],["漸","점점 점"],["蝶","나비 접"],["亭","정자 정"],["訂","바로잡을 정"],["廷","조정 정"],["程","한도 정"],["征","칠 정"],["整","가지런할 정"],["提","끌 제"],["堤","둑 제"],["制","절제할 제"],["際","즈음/가 제"],["齊","가지런할 제"],["濟","건널 제"],["弔","조상할 조"],["燥","마를 조"],["操","잡을 조"],["照","비출 조"],["條","가지 조"],["潮","밀물/조수 조"],["租","조세 조"],["組","끈 조"],["拙","옹졸할 졸"],["縱","세로 종"],["佐","도울 좌"],["座","자리 좌"],["舟","배 주"],["周","두루 주"],["株","그루 주"],["州","고을 주"],["洲","물가 주"],["柱","기둥 주"],["奏","아뢸 주"],["珠","구슬 주"],["鑄","불릴 주"],["準","준할 준"],["俊","준걸 준"],["遵","좇을 준"],["仲","버금 중"],["憎","미울 증"],["贈","줄 증"],["症","증세 증"],["蒸","찔 증"],["池","못 지"],["誌","기록할 지"],["智","슬기 지"],["遲","더딜/늦을 지"],["職","벼슬 직"],["織","짤 직"],["振","떨칠 진"],["鎭","진압할 진"],["陳","베풀 진"],["陣","진칠 진"],["珍","보배 진"],["震","우레 진"],["秩","차례 질"],["疾","병 질"],["姪","조카 질"],["徵","부를 징"],["懲","징계할 징"],["差","다를 차"],["錯","어긋날 착"],["捉","잡을 착"],["贊","도울 찬"],["讚","기릴 찬"],["慘","참혹할 참"],["慙","부끄러울 참"],["倉","곳집 창"],["創","비롯할 창"],["蒼","푸를 창"],["暢","화창할 창"],["彩","무늬 채"],["債","빚 채"],["策","꾀 책"],["斥","물리칠 척"],["拓","열/넓힐 척"],["戚","친척 척"],["賤","천할 천"],["踐","밟을 천"],["遷","옮길 천"],["薦","천거할 천"],["哲","밝을 철"],["徹","뚫을 철"],["尖","뾰족할 첨"],["添","더할 첨"],["妾","첩 첩"],["廳","관청 청"],["替","바꿀 체"],["滯","막힐 체"],["逮","잡을 체"],["遞","갈릴 체"],["肖","닮을 초"],["超","넘을 초"],["抄","베낄 초"],["礎","주춧돌 초"],["秒","초 초"],["促","재촉할 촉"],["燭","촛불 촉"],["觸","닿을 촉"],["銃","총 총"],["總","거느릴 총"],["聰","총명할 총"],["催","재촉할 최"],["抽","뽑을 추"],["醜","추할 추"],["畜","가축 축"],["蓄","모을 축"],["築","쌓을 축"],["逐","쫓을 축"],["縮","줄일 축"],["衝","찌를 충"],["臭","냄새 취"],["醉","취할 취"],["趣","뜻 취"],["側","곁 측"],["測","잴 측"],["層","층 층"],["値","값 치"],["置","둘 치"],["恥","부끄러울 치"],["漆","옻 칠"],["侵","침노할 침"],["浸","담글 침"],["寢","잘 침"],["沈","가라앉을 침"],["枕","베개 침"],["稱","일컬을 칭"],["妥","온당할 타"],["墮","떨어질 타"],["濁","흐릴 탁"],["托","맡길 탁"],["濯","씻을 탁"],["卓","높을 탁"],["炭","숯 탄"],["歎","탄식할 탄"],["彈","탄알 탄"],["誕","낳을 탄"],["奪","빼앗을 탈"],["貪","탐할 탐"],["塔","탑 탑"],["湯","끓일 탕"],["怠","게으를 태"],["殆","거의 태"],["態","모양 태"],["澤","못 택"],["擇","가릴 택"],["吐","토할 토"],["討","칠 토"],["痛","아플 통"],["透","사무칠 투"],["鬪","싸울 투"],["派","갈래 파"],["播","뿌릴 파"],["罷","마칠 파"],["頗","자못 파"],["把","잡을 파"],["板","널빤지 판"],["販","팔 판"],["版","판목 판"],["編","엮을 편"],["遍","두루 편"],["偏","치우칠 편"],["評","평할 평"],["肺","허파 폐"],["廢","버릴/폐할 폐"],["弊","폐단/해질 폐"],["蔽","덮을 폐"],["幣","화폐/비단 폐"],["包","쌀 포"],["胞","세포/여드름 포"],["飽","배부를 포"],["浦","물가 포"],["捕","잡을 포"],["爆","터질 폭"],["幅","너비 폭"],["票","표 표"],["標","나타낼 표"],["漂","떠다닐 표"],["疲","지칠 피"],["被","입을 피"],["避","피할 피"],["畢","마칠 필"],["荷","멜 하"],["鶴","두루미 학"],["旱","가물 한"],["汗","땀 한"],["割","나눌 할"],["咸","다 함"],["含","머금을 함"],["陷","빠질 함"],["巷","거리 항"],["港","항구 항"],["項","항목 항"],["抗","겨룰 항"],["航","배 항"],["奚","어찌 해"],["該","갖출 해"],["核","씨 핵"],["響","울릴 향"],["享","누릴 향"],["軒","집 헌"],["憲","법 헌"],["獻","드릴/바칠 헌"],["險","험할 험"],["驗","시험할 험"],["玄","검을 현"],["絃","줄 현"],["縣","고을 현"],["懸","매달 현"],["顯","나타날 현"],["穴","구멍 혈"],["脅","위협할/으를 협"],["亨","형통할 형"],["螢","반딧불이 형"],["衡","저울대 형"],["慧","슬기로울 혜"],["兮","어조사 혜"],["互","서로 호"],["胡","오랑캐 호"],["浩","넓을 호"],["毫","터럭 호"],["豪","호걸 호"],["護","도울 호"],["惑","미혹할 혹"],["昏","어두울 혼"],["魂","넋 혼"],["忽","갑자기/문득 홀"],["洪","넓을/큰물 홍"],["弘","넓을 홍"],["鴻","기러기 홍"],["禾","벼 화"],["禍","재앙 화"],["確","굳을 확"],["穫","거둘 확"],["擴","넓힐 확"],["丸","둥글 환"],["換","바꿀 환"],["環","고리 환"],["還","돌아올 환"],["況","상황 황"],["荒","거칠 황"],["悔","뉘우칠 회"],["懷","품을 회"],["獲","얻을 획"],["劃","그을 획"],["橫","가로 횡"],["曉","새벽 효"],["侯","제후 후"],["候","기후 후"],["毁","헐 훼"],["揮","휘두를 휘"],["輝","빛날 휘"],["携","이끌/가질 휴"],["吸","마실 흡"],["戲","놀이 희"],["稀","드물 희"]]};
+const CODE_GS = "/**\n * 한자 찾기 AR — 학생 결과 모으기 + 모둠 (Google Apps Script)\n *\n * 1) 구글 시트에서 확장 프로그램 → Apps Script를 열고 이 내용을 전부 붙여 넣습니다.\n * 2) 아래 TEACHER_KEY를 선생님만 아는 비밀번호로 바꾸고 저장합니다.\n * 3) 배포 → 새 배포 → 웹 앱 (실행 사용자: 나, 액세스 권한: 모든 사용자) → 배포\n * 4) 나온 웹 앱 주소(…/exec)를 게임 만들기 화면의 ‘결과 수집 주소’에 넣습니다.\n *\n * 고친 뒤에는 ‘배포 관리 → 수정 → 새 버전’으로 올려야 주소가 그대로 유지됩니다.\n * (이전 판 Code.gs를 쓰던 시트라면, 이 내용으로 바꿔 붙여 넣고 ‘새 버전’으로 배포하세요. 기존 기록은 그대로 남습니다.)\n *\n * 시트 탭(없으면 자동으로 만들어짐)\n *  - 기록: 학생이 게임에서 한 일(시작·오답·포획·연장·끝)이 한 줄씩 쌓임\n *  - 모둠: 모둠에 참가한 학생 명단(모둠 기능을 켠 게임만)\n */\nconst TEACHER_KEY = '여기에_비밀번호를_적으세요';\nconst SHEET_NAME = '기록';\nconst TEAM_SHEET = '모둠';\nconst HEADERS = ['시각', '게임ID', '게임제목', '이름', '학번', '난이도', '이벤트', '한자', '훈음', '고른답', '오답수', '힌트', '점수', '상세', '이벤트ID', '미리보기', '모둠', '한자ID'];\nconst TEAM_HEADERS = ['시각', '게임ID', '모둠', '이름', '학번', '미리보기'];\nconst EVENTS = ['start', 'wrong', 'capture', 'end', 'extend'];\nconst TEAM_MAX_LIMIT = 10;   // 게임 만들기 화면에서 정할 수 있는 모둠 최대 인원의 상한\n\nconst cut_ = (v, n) => String(v == null ? '' : v).trim().slice(0, n);\n\nfunction doPost(e) {\n  try {\n    const d = JSON.parse((e && e.postData && e.postData.contents) || '{}');\n    if (!d || EVENTS.indexOf(d.ev) < 0 || !d.game) return json_({ ok: false, error: 'bad' });\n    const lock = LockService.getScriptLock();\n    lock.waitLock(10000);\n    try {\n      sheet_().appendRow([\n        new Date(), cut_(d.game, 40), cut_(d.title, 60), cut_(d.name, 30), cut_(d.no, 20), cut_(d.diff, 10),\n        d.ev, cut_(d.char, 8), cut_(d.meaning, 40), cut_(d.chosen, 40),\n        Number(d.wrong) || 0, d.hint ? 1 : 0, Number(d.score) || 0,\n        cut_(d.extra ? JSON.stringify(d.extra) : '', 500), cut_(d.cid, 40), d.pv ? 1 : 0,\n        cut_(d.team, 20), cut_(d.item, 20)\n      ]);\n    } finally {\n      lock.releaseLock();\n    }\n    return json_({ ok: true });\n  } catch (err) {\n    return json_({ ok: false, error: String(err) });\n  }\n}\n\nfunction doGet(e) {\n  const p = (e && e.parameter) || {};\n  if (p.action === 'ping') return json_({ ok: true, app: 'hanjaAR', v: 2, team: true });\n  if (p.action === 'join') return json_(joinTeam_(p));\n  if (p.action === 'team') return json_(teamStatus_(p));\n  if (p.action === 'results') {\n    if (TEACHER_KEY === '여기에_비밀번호를_적으세요') return json_({ ok: false, error: 'nokey' });\n    if (String(p.key || '') !== TEACHER_KEY) return json_({ ok: false, error: 'key' });\n    const values = sheet_().getDataRange().getValues();\n    const games = {};\n    const rows = [];\n    for (let i = 1; i < values.length; i++) {\n      const r = values[i];\n      const id = String(r[1]);\n      if (!id) continue;\n      const g = games[id] || (games[id] = { id: id, title: String(r[2]), students: {}, last: 0 });\n      const t = time_(r[0]);\n      if (t > g.last) { g.last = t; g.title = String(r[2]) || g.title; }\n      if (!Number(r[15])) g.students[String(r[3]) + '|' + String(r[4])] = 1;\n      if (!p.game || p.game === id) {\n        rows.push({ t: t, game: id, name: String(r[3]), no: String(r[4]), diff: String(r[5]), ev: String(r[6]),\n          char: String(r[7]), meaning: String(r[8]), chosen: String(r[9]), wrong: Number(r[10]) || 0,\n          hint: Number(r[11]) || 0, score: Number(r[12]) || 0, extra: String(r[13]), cid: String(r[14]), pv: Number(r[15]) || 0,\n          team: String(r[16] == null ? '' : r[16]), item: String(r[17] == null ? '' : r[17]) });\n      }\n    }\n    const list = Object.keys(games).map(function (k) {\n      const g = games[k];\n      return { id: g.id, title: g.title, students: Object.keys(g.students).length, last: g.last };\n    }).sort(function (a, b) { return b.last - a.last; });\n    return json_({ ok: true, games: list, rows: rows });\n  }\n  return json_({ ok: true, app: 'hanjaAR', hint: 'action=ping 또는 action=results' });\n}\n\n/** 모둠 참가: 같은 게임·같은 모둠의 인원(이름+학번 기준)이 정원 미만일 때만 등록. 이미 등록된 학생의 재접속은 통과 */\nfunction joinTeam_(p) {\n  const game = cut_(p.game, 40), team = cut_(p.team, 20), name = cut_(p.name, 30), no = cut_(p.no, 20);\n  const pv = p.pv ? 1 : 0;\n  const max = Math.max(1, Math.min(TEAM_MAX_LIMIT, parseInt(p.max, 10) || 4));\n  if (!game || !team || !name) return { ok: false, error: 'bad' };\n  const lock = LockService.getScriptLock();\n  try { lock.waitLock(10000); } catch (err) { return { ok: false, error: 'busy' }; }\n  try {\n    const sh = teamSheet_();\n    const members = membersOf_(sh.getDataRange().getValues(), game, team, pv);\n    const me = name + '|' + no;\n    if (!members.some(m => m.key === me)) {\n      if (members.length >= max) return { ok: false, error: 'team_full', limit: max, count: members.length, members: members.map(m => m.name) };\n      sh.appendRow([new Date(), game, team, name, no, pv]);\n      members.push({ key: me, name: name, no: no });\n    }\n    return { ok: true, team: team, limit: max, count: members.length, members: members.map(m => m.name) };\n  } finally {\n    lock.releaseLock();\n  }\n}\n\n/** 모둠 현황: 구성원과 모둠이 함께 잡은 한자(한자ID별 가장 먼저 잡은 기록) */\nfunction teamStatus_(p) {\n  const game = cut_(p.game, 40), team = cut_(p.team, 20), pv = p.pv ? 1 : 0;\n  if (!game || !team) return { ok: false, error: 'bad' };\n  const members = membersOf_(teamSheet_().getDataRange().getValues(), game, team, pv);\n  const values = sheet_().getDataRange().getValues();\n  const caught = {};\n  for (let i = 1; i < values.length; i++) {\n    const r = values[i];\n    if (String(r[6]) !== 'capture' || String(r[1]) !== game || String(r[16] == null ? '' : r[16]).trim() !== team || (Number(r[15]) ? 1 : 0) !== pv) continue;\n    const item = String(r[17] == null ? '' : r[17]) || String(r[7]);\n    const t = time_(r[0]);\n    if (!caught[item] || t < caught[item].t) caught[item] = { item: item, char: String(r[7]), by: String(r[3]), t: t };\n  }\n  return { ok: true, team: team, members: members.map(m => m.name), caught: Object.keys(caught).map(k => caught[k]) };\n}\n\nfunction membersOf_(values, game, team, pv) {\n  const seen = {}, out = [];\n  for (let i = 1; i < values.length; i++) {\n    const r = values[i];\n    if (String(r[1]) !== game || String(r[2]).trim() !== team || (Number(r[5]) ? 1 : 0) !== pv) continue;\n    const key = String(r[3]) + '|' + String(r[4]);\n    if (!seen[key]) { seen[key] = 1; out.push({ key: key, name: String(r[3]), no: String(r[4]) }); }\n  }\n  return out;\n}\n\nfunction time_(v) { return v instanceof Date ? v.getTime() : Number(new Date(v)) || 0; }\n\nfunction sheet_() { return ensure_(SHEET_NAME, HEADERS); }\nfunction teamSheet_() { return ensure_(TEAM_SHEET, TEAM_HEADERS); }\nfunction ensure_(name, headers) {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  let sh = ss.getSheetByName(name);\n  if (!sh) {\n    sh = ss.insertSheet(name);\n    sh.appendRow(headers);\n    sh.setFrozenRows(1);\n  } else if (String(sh.getRange(1, headers.length).getValue()) === '') {\n    /* 이전 판에서 만든 시트: 새로 생긴 열의 머리글을 채움 */\n    sh.getRange(1, 1, 1, headers.length).setValues([headers]);\n  }\n  return sh;\n}\n\nfunction json_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\n";
+/* 내보내기용 원본: 다른 코드가 화면을 바꾸기 전에 이 파일 자체의 원문을 보관 */
+const PRISTINE = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+/* ---------- 공용 도구 ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const EARTH = 6371000, toRad = d => d * Math.PI / 180, toDeg = r => r * 180 / Math.PI;
+const norm = d => ((d % 360) + 360) % 360;
+function distM(a, b){
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const x = Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+  return 2*EARTH*Math.asin(Math.min(1, Math.sqrt(x)));
+}
+function bearing(a, b){
+  const y = Math.sin(toRad(b.lng-a.lng))*Math.cos(toRad(b.lat));
+  const x = Math.cos(toRad(a.lat))*Math.sin(toRad(b.lat)) - Math.sin(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.cos(toRad(b.lng-a.lng));
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+function angDiff(a, b){ return ((a - b + 540) % 360) - 180; }
+function offsetPoint(p, meters, brg){
+  const d = meters / EARTH, br = toRad(brg), la = toRad(p.lat), lo = toRad(p.lng);
+  const la2 = Math.asin(Math.sin(la)*Math.cos(d) + Math.cos(la)*Math.sin(d)*Math.cos(br));
+  const lo2 = lo + Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(la), Math.cos(d)-Math.sin(la)*Math.sin(la2));
+  return {lat: toDeg(la2), lng: toDeg(lo2)};
+}
+/* 짧은 거리용 평면 좌표(m) 변환 — 링크에 좌표를 짧게 담을 때 사용 */
+const M_LAT = 110574, mLng = lat => 111320 * Math.cos(toRad(lat));
+function toXY(p, c){ return [(p.lng - c.lng) * mLng(c.lat), (p.lat - c.lat) * M_LAT]; }
+function fromXY(x, y, c){ return {lat: c.lat + y / M_LAT, lng: c.lng + x / mLng(c.lat)}; }
+
+const DIR8 = ['북','북동','동','남동','남','남서','서','북서'];
+const REL8 = ['바로 앞','오른쪽 앞','오른쪽','오른쪽 뒤','뒤','왼쪽 뒤','왼쪽','왼쪽 앞'];
+const dirName = b => DIR8[Math.round(b/45) % 8];
+const relName = d => REL8[Math.round(norm(d) / 45) % 8];
+const fmtDist = m => m < 1000 ? Math.round(m) + 'm' : (m/1000).toFixed(1) + 'km';
+const fmtTime = ms => { const s = Math.max(0, Math.round(ms/1000)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function hashNum(str){ let h = 2166136261; for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; }
+function platform(){
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'other';
+}
+function loadScript(src){
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(s); });
+}
+
+/* ---------- 휴대폰 방향 읽기 ----------
+   h: 방위(0~360, 오른쪽으로 갈수록 커짐), abs: 진짜 북쪽 기준인지, pitch: 위(+)/아래(-) 기울기(세로로 들었을 때) */
+function readOrientation(e){
+  let h = null, abs = false;
+  if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)){ h = e.webkitCompassHeading; abs = true; }
+  else if (e.alpha != null){ h = (360 - e.alpha) % 360; abs = e.absolute === true || e.type === 'deviceorientationabsolute'; }
+  if (h == null) return null;
+  const so = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+  h = norm(h + so);
+  const pitch = e.beta == null ? 0 : Math.max(-80, Math.min(80, e.beta - 90));
+  return {h, abs, pitch};
+}
+const iosOrientPerm = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+
+/* ---------- 소리 듣기 (휴대폰 음성) ---------- */
+function speak(text){
+  try {
+    if (!('speechSynthesis' in window)) return false;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = 'ko-KR'; u.rate = 0.9;
+    const v = speechSynthesis.getVoices().find(x => /^ko/i.test(x.lang));
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+    return true;
+  } catch(e){ return false; }
+}
+const speakItem = it => speak(it.meaning);
+
+/* ---------- Plus Code(오픈 로케이션 코드) 해석 ---------- */
+const OLC = '23456789CFGHJMPQRVWX', OLC_RES = [20, 1, 0.05, 0.0025, 0.000125];
+function olcDecode(code){
+  code = code.toUpperCase().replace('+','').replace(/0+$/,'');
+  let lat = -90, lng = -180, latRes = 20, lngRes = 20;
+  for (let i = 0; i < Math.min(code.length, 10); i += 2){
+    const r = OLC_RES[i/2];
+    const a = OLC.indexOf(code[i]), b = OLC.indexOf(code[i+1]);
+    if (a < 0 || b < 0) throw new Error('bad');
+    lat += a*r; lng += b*r; latRes = r; lngRes = r;
+  }
+  for (let i = 10; i < code.length; i++){
+    latRes /= 5; lngRes /= 4;
+    const v = OLC.indexOf(code[i]); if (v < 0) throw new Error('bad');
+    lat += Math.floor(v/4)*latRes; lng += (v%4)*lngRes;
+  }
+  return {lat: lat + latRes/2, lng: lng + lngRes/2};
+}
+function olcEncode(lat, lng){
+  lat = Math.min(89.9999999, Math.max(-90, lat));
+  lng = ((lng + 180) % 360 + 360) % 360 - 180;
+  let la = lat + 90, lo = lng + 180, code = '';
+  for (let i = 0; i < 5; i++){
+    const r = OLC_RES[i];
+    const a = Math.min(19, Math.floor(la/r + 1e-9)), b = Math.min(19, Math.floor(lo/r + 1e-9));
+    la -= a*r; lo -= b*r;
+    code += OLC[a] + OLC[b];
+    if (code.length === 8) code += '+';
+  }
+  return code;
+}
+function olcRecover(shortCode, refLat, refLng){
+  const code = shortCode.toUpperCase();
+  const pad = 8 - code.indexOf('+');
+  if (pad <= 0) return olcDecode(code);
+  const res = Math.pow(20, 2 - pad/2), half = res/2;
+  const prefix = olcEncode(refLat, refLng).replace('+','').slice(0, pad);
+  const p = olcDecode(prefix + code.replace('+',''));
+  let lat = p.lat, lng = p.lng;
+  if (refLat + half < lat && lat - res >= -90) lat -= res;
+  else if (refLat - half > lat && lat + res <= 90) lat += res;
+  if (refLng + half < lng) lng -= res;
+  else if (refLng - half > lng) lng += res;
+  return {lat, lng};
+}
+function parseLocation(text, ref){
+  const t = String(text || '').trim();
+  if (!t) return null;
+  const m = t.match(/(-?\d{1,3}(?:\.\d+)?)\s*[,\s]\s*(-?\d{1,3}(?:\.\d+)?)/);
+  if (m){
+    const lat = +m[1], lng = +m[2];
+    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && (String(m[1]).includes('.') || String(m[2]).includes('.'))) return {lat, lng, kind:'좌표'};
+  }
+  const p = t.toUpperCase().match(/([23456789CFGHJMPQRVWX]{2,8}\+[23456789CFGHJMPQRVWX]{0,3})/);
+  if (p){
+    try {
+      const code = p[1];
+      if (code.indexOf('+') === 8) return Object.assign(olcDecode(code), {kind:'Plus Code'});
+      const r = ref || {lat: 36.5, lng: 127.8};
+      return Object.assign(olcRecover(code, r.lat, r.lng), {kind:'Plus Code(지도 중심 기준)'});
+    } catch(e){}
+  }
+  return null;
+}
+
+/* ---------- 내장 한자 목록 ---------- */
+const DB = {
+  mid: HANJA_DATA.mid.map(([c, r]) => ({c, r, lv:'mid'})),
+  high: HANJA_DATA.high.map(([c, r]) => ({c, r, lv:'high'}))
+};
+const LOOK = new Map();
+DB.mid.concat(DB.high).forEach(h => { if (!LOOK.has(h.c)) LOOK.set(h.c, h); });
+
+/* 퀴즈 보기가 모자랄 때 쓰는 기본 훈음 */
+const FALLBACK_MEANINGS = ['나무 목','물 수','불 화','흙 토','쇠 금','날 일','달 월','사람 인','큰 대','작을 소','메 산','내 천','마음 심','눈 목','입 구','손 수','발 족','하늘 천','땅 지','가운데 중','윗 상','아래 하','바를 정','아들 자','여자 녀','설 립','밝을 명','들을 문','말씀 언','바람 풍'];
+
+const DEFAULT_CONSENT = '이름과 학번은 선생님이 수업 참여와 학습 결과를 확인하는 데에만 씁니다.\n이용 목적: 수업 참여 확인과 개별 학습 지도\n이용 주체: 담당 교사\n보유 기간: 이번 학년도 말까지 보관 후 파기\n동의하지 않으면 선생님께 말씀해 주세요.';
+const TEAM_MAX_LIMIT = 10;     /* 모둠 최대 인원 상한 (Code.gs의 TEAM_MAX_LIMIT과 같게) */
+/* 모둠 이름 맞추기: 띄어쓰기 없애고 영문은 대문자로 (‘1 모둠’ = ‘1모둠’) */
+const normTeam = t => String(t || '').replace(/\s+/g, '').toUpperCase().slice(0, 20);
+const ELEV_DEG = 30;           /* 제자리 모드 높이 1단계 = 30° */
+const ELEV_NAME = {'1':'위', '0':'정면', '-1':'아래'};
+
+/* ---------- 지도(Leaflet) 공용 ---------- */
+function loadLeaflet(){
+  return new Promise((res, rej) => {
+    if (window.L) return res(window.L);
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'; document.head.appendChild(l);
+    const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+    s.onload = () => window.L ? res(window.L) : rej(new Error('no L')); s.onerror = rej; document.head.appendChild(s);
+  });
+}
+/* 지도 바탕: Esri 위성 사진(+CARTO 지명) / CARTO 일반 지도. 한쪽이 계속 실패하면 다른 쪽으로 자동 전환
+   (OpenStreetMap 공식 타일 서버는 파일을 직접 연 경우 등 출처 정보 없는 요청을 차단하므로 쓰지 않음) */
+function addBaseLayers(L, map, toast){
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19, maxNativeZoom:19, attribution:'Tiles © Esri'});
+  const road = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {maxZoom:19, subdomains:'abcd', attribution:'© OpenStreetMap contributors © CARTO'});
+  const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png', {maxZoom:19, subdomains:'abcd', pane:'overlayPane'});
+  const satGroup = L.layerGroup([sat, labels]);
+  satGroup.addTo(map);
+  L.control.layers({'위성 사진':satGroup, '일반 지도':road}).addTo(map);
+  let fails = 0, switched = false;
+  const onFail = (to, name) => () => {
+    if (switched || ++fails < 6) return;
+    switched = true; map.eachLayer(l => { if (l === sat || l === labels || l === road) map.removeLayer(l); });
+    to.addTo(map); if (toast) toast(name + ' 지도로 바꿨어요(처음 지도를 불러오지 못함).');
+  };
+  sat.on('tileerror', onFail(road, '일반'));
+  road.on('tileerror', onFail(satGroup, '위성'));
+}
+
+/* ---------- 게임 데이터: 기본값 맞추기 ---------- */
+function newGameData(){
+  return {version:2, id:uid('g'), title:'한자 찾기', mode:'walk', timeLimitMin:20, defaultRadius:15, hintAfterWrong:2,
+    guide:true, useCamera:true, mapMode:'approx', gas:'', consent:DEFAULT_CONSENT, team:false, teamMax:4, items:[]};
+}
+function newItem(d){ return {id:uid('h'), char:'', meaning:'', radical:'', hint:'', wrong:[], lat:null, lng:null, radius:+(d && d.defaultRadius) || 15, bearing:null, elev:0}; }
+function normalizeGame(d){
+  const base = newGameData();
+  for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
+  delete d.googleKey;
+  if (d.mode !== 'spot') d.mode = 'walk';
+  d.team = !!d.team; d.teamMax = Math.max(2, Math.min(TEAM_MAX_LIMIT, parseInt(d.teamMax, 10) || 4));
+  d.items = (d.items || []).map(it => {
+    const x = Object.assign(newItem(d), it);
+    x.wrong = Array.isArray(x.wrong) ? x.wrong : String(x.wrong || '').split(/[,，|]/).map(s => s.trim()).filter(Boolean);
+    if (x.lat == null || x.lng == null || !isFinite(x.lat) || !isFinite(x.lng)){ x.lat = null; x.lng = null; }
+    x.bearing = (x.bearing == null || x.bearing === '' || !isFinite(+x.bearing)) ? null : norm(+x.bearing);
+    x.elev = [-1, 0, 1].includes(+x.elev) ? +x.elev : 0;
+    x.radius = +x.radius > 0 ? +x.radius : 15;
+    return x;
+  });
+  return d;
+}
+/* 해당 모드에서 자리가 정해졌는지 */
+const isPlaced = (it, mode) => mode === 'spot' ? it.bearing != null : it.lat != null;
+
+/* ---------- 링크에 게임 담기: 짧게 줄인 JSON → 압축(deflate-raw) → base64url ---------- */
+const shortId = id => Math.floor(hashNum(String(id)) * 1679616).toString(36).padStart(4, '0');
+function compactGame(d){
+  const spot = d.mode === 'spot';
+  const o = {v:2, id:d.id, n:d.title || '', m:spot ? 's' : 'w', t:+d.timeLimitMin || 0, h:+d.hintAfterWrong || 2,
+    gd:d.guide ? 1 : 0, cm:d.useCamera ? 1 : 0};
+  if (!spot) o.mm = d.mapMode || 'approx';
+  if (d.gas){ o.gs = d.gas; if (d.consent && d.consent !== DEFAULT_CONSENT) o.cs = d.consent; if (d.team) o.tm = d.teamMax; }
+  const items = d.items.filter(it => it.char && it.meaning && isPlaced(it, d.mode));
+  let c = null;
+  if (!spot && items.length){
+    c = {lat: items.reduce((s, it) => s + it.lat, 0) / items.length, lng: items.reduce((s, it) => s + it.lng, 0) / items.length};
+    c = {lat:+c.lat.toFixed(6), lng:+c.lng.toFixed(6)};
+    o.c = [c.lat, c.lng];
+  }
+  o.i = items.map(it => {
+    const base = LOOK.get(it.char);
+    const a = [shortId(it.id), it.char, base && base.r === it.meaning ? 0 : it.meaning];
+    if (spot) a.push(Math.round(it.bearing), it.elev | 0);
+    else { const xy = toXY(it, c); a.push(Math.round(xy[0] * 10) / 10, Math.round(xy[1] * 10) / 10, +it.radius || 15); }
+    a.push(it.radical || '', it.hint || '', (it.wrong || []).filter(Boolean).join('|'));
+    while (a.length > 5 && a[a.length - 1] === '') a.pop();
+    return a;
+  });
+  return o;
+}
+function expandGame(o){
+  if (!o || o.v !== 2 || !Array.isArray(o.i) || !o.i.length) throw new Error('게임 정보가 올바르지 않습니다.');
+  const spot = o.m === 's';
+  const c = o.c ? {lat:+o.c[0], lng:+o.c[1]} : null;
+  const d = {version:2, id:String(o.id || 'g'), title:o.n || '한자 찾기', mode:spot ? 'spot' : 'walk', timeLimitMin:+o.t || 0,
+    hintAfterWrong:+o.h || 2, guide:!!o.gd, useCamera:!!o.cm, mapMode:o.mm || 'approx', gas:o.gs || '',
+    consent:o.cs || DEFAULT_CONSENT, defaultRadius:15, team:!!(o.gs && o.tm), teamMax:+o.tm || 4, items:[]};
+  d.items = o.i.map(a => {
+    const base = LOOK.get(a[1]);
+    const it = {id:String(a[0]), char:String(a[1]), meaning:a[2] ? String(a[2]) : (base ? base.r : '?'), radical:'', hint:'', wrong:[],
+      lat:null, lng:null, radius:15, bearing:null, elev:0};
+    let k = 3;
+    if (spot){ it.bearing = norm(+a[3] || 0); it.elev = [-1, 0, 1].includes(+a[4]) ? +a[4] : 0; k = 5; }
+    else { const p = fromXY(+a[3] || 0, +a[4] || 0, c); it.lat = p.lat; it.lng = p.lng; it.radius = +a[5] || 15; k = 6; }
+    it.radical = a[k] || ''; it.hint = a[k + 1] || ''; it.wrong = a[k + 2] ? String(a[k + 2]).split('|').filter(Boolean) : [];
+    return it;
+  });
+  return d;
+}
+function bytesToB64url(bytes){
+  let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlToBytes(s){
+  s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+  const bin = atob(s); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out;
+}
+function canDeflate(){ try { new CompressionStream('deflate-raw'); new DecompressionStream('deflate-raw'); return true; } catch(e){ return false; } }
+async function streamBytes(bytes, stream){
+  const w = stream.writable.getWriter(); w.write(bytes); w.close();
+  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+}
+async function encodeGame(d){
+  const raw = new TextEncoder().encode(JSON.stringify(compactGame(d)));
+  if (canDeflate()){
+    const z = await streamBytes(raw, new CompressionStream('deflate-raw'));
+    if (z.length < raw.length) return 'z' + bytesToB64url(z);
+  }
+  return 'j' + bytesToB64url(raw);
+}
+async function decodeGame(code){
+  const kind = code[0], bytes = b64urlToBytes(code.slice(1));
+  let raw;
+  if (kind === 'z'){
+    if (!canDeflate()) throw new Error('old');
+    raw = await streamBytes(bytes, new DecompressionStream('deflate-raw'));
+  } else if (kind === 'j') raw = bytes;
+  else throw new Error('bad');
+  return expandGame(JSON.parse(new TextDecoder().decode(raw)));
+}
+function buildExportHTML(data){
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  const re = /(<script type="application\/json" id="game-data">)[\s\S]*?(<\/script>)/;
+  if (!re.test(PRISTINE)) throw new Error('원본에서 데이터 자리를 찾지 못했습니다.');
+  return PRISTINE.replace(re, (m, a, b) => a + json + b);
+}
+function download(name, text, type){
+  const blob = new Blob([text], {type});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+const QR_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+async function drawQR(el, text, size){
+  el.innerHTML = '';
+  if (!window.QRCode) await loadScript(QR_LIB).catch(() => {});
+  if (!window.QRCode || !window.QRCode.CorrectLevel) throw new Error('qr');
+  const L = window.QRCode.CorrectLevel.L;
+  const q = new window.QRCode(el, {text, width:size, height:size, correctLevel:L});
+  /* 칸 크기가 정수 픽셀이 되도록 다시 그림(칸 사이에 흰 줄이 생기면 휴대폰이 잘 못 읽음) */
+  const n = q && q._oQRCode && q._oQRCode.getModuleCount && q._oQRCode.getModuleCount();
+  if (n){ const s2 = n * Math.max(2, Math.floor(size / n)); if (s2 !== size){ el.innerHTML = ''; new window.QRCode(el, {text, width:s2, height:s2, correctLevel:L}); } }
+}
+/* =========================================================
+   교사용 편집기
+   ========================================================= */
+function initBuilder(importData){
+  document.title = '한자 찾기 AR · 게임 만들기';
+  $('#builder').hidden = false;
+  const STORE = 'hanjaAR-games', APPURL_KEY = 'hanjaAR-appurl', RGAS_KEY = 'hanjaAR-results-gas';
+
+  let toastT;
+  function toast(msg, ms){ const t = $('#b-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms || 2800); }
+
+  /* ----- 여러 게임 저장 ----- */
+  function loadStore(){
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STORE)); } catch(e){}
+    if (!s || typeof s.games !== 'object' || !s.games) s = {current:null, games:{}};
+    try {   /* 이전 판의 초안 하나짜리 저장을 옮겨 옴 */
+      const old = JSON.parse(localStorage.getItem('hanjaAR-draft'));
+      if (old && Array.isArray(old.items) && old.id && !s.games[old.id]){ s.games[old.id] = old; if (!s.current) s.current = old.id; }
+      localStorage.removeItem('hanjaAR-draft');
+    } catch(e){}
+    for (const k of Object.keys(s.games)) normalizeGame(s.games[k]);
+    return s;
+  }
+  let store = loadStore(), D = null;
+  function persist(){
+    try { localStorage.setItem(STORE, JSON.stringify(store)); }
+    catch(e){ toast('브라우저 저장 공간이 부족해 저장하지 못했어요. 백업 파일로 저장해 두세요.', 4000); }
+  }
+  function useGame(id){ D = store.games[id]; store.current = id; persist(); }
+  function importGame(data, fromWhere){
+    const imp = normalizeGame(JSON.parse(JSON.stringify(data)));
+    delete imp._preview;
+    const ex = store.games[imp.id];
+    if (ex && JSON.stringify(ex) !== JSON.stringify(imp)){
+      if (!confirm('이 게임을 이 브라우저에서 고친 내용이 남아 있습니다. 고친 내용을 그대로 열까요?\n(취소를 누르면 ' + fromWhere + '에 들어 있는 내용으로 엽니다)')) store.games[imp.id] = imp;
+    } else if (!ex) store.games[imp.id] = imp;
+    useGame(imp.id);
+  }
+  if (importData) importGame(importData, '링크·파일');
+  if (!D){
+    const ids = Object.keys(store.games);
+    if (store.current && store.games[store.current]) useGame(store.current);
+    else if (ids.length) useGame(ids[0]);
+    else { const g = newGameData(); store.games[g.id] = g; useGame(g.id); }
+  }
+  const save = () => { persist(); updateCheck(); };
+  const find = id => D.items.find(x => x.id === id);
+
+  function renderGameSel(){
+    const sel = $('#b-game-sel');
+    const ids = Object.keys(store.games);
+    sel.innerHTML = ids.map(id => {
+      const g = store.games[id];
+      return '<option value="' + esc(id) + '"' + (id === D.id ? ' selected' : '') + '>' + esc(g.title || '(제목 없음)') + ' · ' + (g.mode === 'spot' ? '제자리' : '걷기') + ' · ' + g.items.length + '자</option>';
+    }).join('');
+    $('#b-del').disabled = ids.length <= 1;
+  }
+  $('#b-game-sel').addEventListener('change', e => { useGame(e.target.value); reloadAll(); });
+  $('#b-new').addEventListener('click', () => { const g = newGameData(); store.games[g.id] = g; useGame(g.id); reloadAll(); toast('새 게임을 만들었어요.'); $('#b-title').focus(); });
+  $('#b-dup').addEventListener('click', () => {
+    const g = JSON.parse(JSON.stringify(D)); g.id = uid('g'); g.title = (D.title || '한자 찾기') + ' (복사본)';
+    g.items.forEach(it => it.id = uid('h'));
+    store.games[g.id] = g; useGame(g.id); reloadAll(); toast('복사본을 만들었어요. 학생 기록은 원래 게임과 따로 쌓입니다.');
+  });
+  $('#b-del').addEventListener('click', () => {
+    if (Object.keys(store.games).length <= 1) return;
+    if (!confirm('‘' + (D.title || '제목 없음') + '’ 게임을 이 브라우저에서 지울까요? (이미 나눠 준 링크는 계속 동작합니다)')) return;
+    delete store.games[D.id]; useGame(Object.keys(store.games)[0]); reloadAll();
+  });
+  $('#b-link-load').addEventListener('click', async () => {
+    const m = $('#b-link-in').value.match(/[#&]g=([A-Za-z0-9_-]+)/);
+    if (!m){ toast('게임 링크에서 #g= 부분을 찾지 못했어요. 링크 전체를 붙여넣어 주세요.'); return; }
+    try { importGame(await decodeGame(m[1]), '링크'); $('#b-link-in').value = ''; reloadAll(); toast('링크의 게임을 불러왔어요.'); }
+    catch(e){ toast(e.message === 'old' ? '이 브라우저가 오래되어 링크를 풀지 못했어요. 크롬·사파리를 최신으로 바꿔 주세요.' : '링크가 잘렸거나 올바르지 않아요.', 4000); }
+  });
+
+  /* ----- 1. 기본 설정 ----- */
+  const bindNum = (sel, key, min, max) => {
+    $(sel).addEventListener('input', e => { const v = parseFloat(e.target.value); if (isFinite(v)){ D[key] = Math.min(max, Math.max(min, v)); save(); } });
+  };
+  $('#b-title').addEventListener('input', e => { D.title = e.target.value; save(); renderGameSel(); });
+  bindNum('#b-time', 'timeLimitMin', 0, 180);
+  bindNum('#b-radius', 'defaultRadius', 5, 200);
+  bindNum('#b-hint', 'hintAfterWrong', 1, 5);
+  $('#b-mapmode').addEventListener('change', e => { D.mapMode = e.target.value; save(); });
+  $('#b-guide').addEventListener('change', e => { D.guide = e.target.checked; save(); });
+  $('#b-camera').addEventListener('change', e => { D.useCamera = e.target.checked; save(); });
+  function setMode(m, user){
+    D.mode = m;
+    $('#builder').className = 'mode-' + m;
+    $('#b-mode-walk').setAttribute('aria-pressed', String(m === 'walk'));
+    $('#b-mode-spot').setAttribute('aria-pressed', String(m === 'spot'));
+    if (m === 'walk' && map) setTimeout(() => { map.invalidateSize(); if (user) fitAll(); }, 50);
+    if (m === 'spot') drawSpot();
+    if (user){ renderItems(); save(); renderGameSel(); }
+  }
+  $('#b-mode-walk').addEventListener('click', () => setMode('walk', true));
+  $('#b-mode-spot').addEventListener('click', () => setMode('spot', true));
+  function loadSettings(){
+    $('#b-title').value = D.title; $('#b-time').value = D.timeLimitMin; $('#b-radius').value = D.defaultRadius;
+    $('#b-hint').value = D.hintAfterWrong; $('#b-camera').checked = !!D.useCamera; $('#b-guide').checked = !!D.guide;
+    $('#b-mapmode').value = D.mapMode || 'approx';
+    $('#b-gas').value = D.gas || ''; $('#b-consent').value = D.consent || DEFAULT_CONSENT; $('#b-gas-msg').textContent = '';
+    $('#b-team').checked = !!D.team; $('#b-team-max').value = D.teamMax; updateTeamUI();
+    setMode(D.mode, false);
+  }
+
+  /* ----- 2. 한자 고르기 ----- */
+  let tab = 'mid';
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $('#b-pick-list').hidden = tab === 'custom'; $('#b-pick-custom').hidden = tab !== 'custom';
+    renderPick();
+  }));
+  function renderPick(){
+    $('#b-pick-count').textContent = D.items.length;
+    if (tab === 'custom') return;
+    const q = $('#b-pick-search').value.trim();
+    const chosen = new Set(D.items.map(it => it.char));
+    const list = DB[tab].filter(h => !q || h.c.includes(q) || h.r.includes(q));
+    $('#b-pick-grid').innerHTML = list.length ? list.map(h =>
+      '<button data-c="' + esc(h.c) + '" aria-pressed="' + chosen.has(h.c) + '" title="' + esc(h.r) + '"><span class="c han">' + esc(h.c) + '</span><span class="r">' + esc(h.r) + '</span></button>').join('')
+      : '<p class="note" style="grid-column:1/-1;padding:8px">찾는 한자가 목록에 없어요. ‘직접 입력’에서 넣을 수 있어요.</p>';
+  }
+  $('#b-pick-search').addEventListener('input', renderPick);
+  function addChar(c, r){
+    const it = newItem(D); it.char = c; it.meaning = r; D.items.push(it); return it;
+  }
+  $('#b-pick-grid').addEventListener('click', e => {
+    const b = e.target.closest('button[data-c]'); if (!b) return;
+    const c = b.dataset.c, h = LOOK.get(c);
+    const have = D.items.filter(it => it.char === c);
+    if (have.length){
+      if (have.some(it => isPlaced(it, D.mode) || it.hint || it.radical) && !confirm('‘' + c + '’을(를) 목록에서 뺄까요? 정해 둔 자리도 함께 지워집니다.')) return;
+      D.items = D.items.filter(it => it.char !== c);
+      b.setAttribute('aria-pressed', 'false');
+    } else { addChar(c, h ? h.r : ''); b.setAttribute('aria-pressed', 'true'); }
+    renderItems(); save();
+    $('#b-pick-count').textContent = D.items.length;
+  });
+  $('#b-rand-btn').addEventListener('click', () => {
+    const n = Math.max(1, Math.min(60, parseInt($('#b-rand-n').value, 10) || 10));
+    const chosen = new Set(D.items.map(it => it.char));
+    const pool = shuffle(DB[tab === 'custom' ? 'mid' : tab].filter(h => !chosen.has(h.c))).slice(0, n);
+    pool.forEach(h => addChar(h.c, h.r));
+    renderItems(); renderPick(); save();
+    toast(pool.length + '자를 무작위로 넣었어요.');
+  });
+  $('#b-pick-clear').addEventListener('click', () => {
+    if (!D.items.length) return;
+    if (!confirm('목록의 한자 ' + D.items.length + '개를 모두 뺄까요? 정해 둔 자리도 함께 지워집니다.')) return;
+    D.items = []; renderItems(); renderPick(); save();
+  });
+  $('#b-c-add').addEventListener('click', () => {
+    const c = $('#b-c-char').value.trim(); let r = $('#b-c-mean').value.trim();
+    if (!c){ toast('한자를 입력하세요.'); $('#b-c-char').focus(); return; }
+    if (!r && LOOK.has(c)) r = LOOK.get(c).r;
+    if (!r){ toast('훈음을 입력하세요.'); $('#b-c-mean').focus(); return; }
+    const it = addChar(c, r); renderItems(); renderPick(); save(); highlightItem(it.id, false);
+    $('#b-c-char').value = ''; $('#b-c-mean').value = ''; $('#b-c-char').focus();
+    toast(c + ' (' + r + ')를 넣었어요.');
+  });
+  $('#b-c-char').addEventListener('input', e => {
+    const c = e.target.value.trim();
+    if (c && LOOK.has(c) && !$('#b-c-mean').value.trim()) $('#b-c-mean').placeholder = LOOK.get(c).r + ' (비워 두면 이 훈음)';
+    else $('#b-c-mean').placeholder = '배울 학';
+  });
+  $('#b-c-mean').addEventListener('keydown', e => { if (e.key === 'Enter') $('#b-c-add').click(); });
+  $('#b-bulk-btn').addEventListener('click', () => {
+    const lines = $('#b-bulk').value.split(/\r?\n/).map(s => s.replace(/\s+$/,'')).filter(s => s.trim());
+    let added = 0; const bad = [];
+    for (const line of lines){
+      const c = (line.includes('\t') ? line.split('\t') : line.split(',')).map(s => s.trim());
+      if (/^한자/.test(c[0])) continue;
+      if (!c[0]){ bad.push(line); continue; }
+      const meaning = c[1] || (LOOK.has(c[0]) ? LOOK.get(c[0]).r : '');
+      if (!meaning){ bad.push(line); continue; }
+      const it = addChar(c[0], meaning);
+      const lat = parseFloat(c[2]), lng = parseFloat(c[3]);
+      if (isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180){ it.lat = lat; it.lng = lng; }
+      else if (c[2]){ const p = parseLocation(c[2] + (c[3] && !isFinite(parseFloat(c[3])) ? ' ' + c[3] : ''), refPoint()); if (p){ it.lat = +p.lat.toFixed(7); it.lng = +p.lng.toFixed(7); } }
+      const rad = parseFloat(c[4]); if (isFinite(rad) && rad > 0) it.radius = rad;
+      it.radical = c[5] || ''; it.hint = c[6] || ''; it.wrong = c.slice(7, 10).filter(Boolean);
+      added++;
+    }
+    renderItems(); renderPick(); save(); fitAll();
+    toast(added + '개를 추가했어요.' + (bad.length ? ' (한자·훈음이 없는 ' + bad.length + '줄은 건너뜀)' : ''));
+    if (added) $('#b-bulk').value = '';
+  });
+
+  /* ----- 4. 한자 목록 ----- */
+  function refPoint(){
+    if (map){ const c = map.getCenter(); return {lat:c.lat, lng:c.lng}; }
+    const w = D.items.find(x => x.lat != null); return w ? {lat:w.lat, lng:w.lng} : null;
+  }
+  const locText = it => it.lat == null ? '' : it.lat.toFixed(6) + ', ' + it.lng.toFixed(6);
+  function itemStatus(it){
+    const miss = [];
+    if (!it.char.trim()) miss.push('한자');
+    if (!it.meaning.trim()) miss.push('훈음');
+    if (!isPlaced(it, D.mode)) miss.push(D.mode === 'spot' ? '방향' : '위치');
+    if (miss.length) return {cls:'st-bad', text: miss.join('·') + '을(를) 정하세요.'};
+    if (D.mode === 'walk' && +it.radius < 8) return {cls:'st-warn', text:'반경이 너무 작으면 GPS 오차 때문에 찾기 어려울 수 있어요(15m 이상 권장).'};
+    return {cls:'st-ok', text:'✓ 준비됨' + (D.mode === 'spot' ? ' · ' + Math.round(it.bearing) + '° ' + ELEV_NAME[it.elev] : '')};
+  }
+  function updateItemStatus(it){
+    const el = document.querySelector('.item[data-id="' + it.id + '"] .item-status');
+    if (!el) return;
+    const s = itemStatus(it); el.className = 'item-status ' + s.cls; el.textContent = s.text;
+  }
+  /* 4. 한자 목록: 여러 개 골라서 한꺼번에 빼기 */
+  const SEL = new Set();
+  function updateSelUI(){
+    for (const id of Array.from(SEL)) if (!find(id)) SEL.delete(id);
+    const n = SEL.size, total = D.items.length;
+    $('#b-sel-bar').hidden = !total;
+    $('#b-sel-count').textContent = n ? n + '개 선택함' : '선택한 한자 없음';
+    $('#b-sel-del').disabled = !n;
+    $('#b-sel-del').textContent = n === total && n ? '전체 ' + n + '개 빼기' : '선택한 한자 빼기' + (n ? ' (' + n + ')' : '');
+    const all = $('#b-sel-all'); all.checked = !!total && n === total; all.indeterminate = n > 0 && n < total;
+  }
+  $('#b-sel-all').addEventListener('change', e => {
+    SEL.clear(); if (e.target.checked) D.items.forEach(it => SEL.add(it.id));
+    document.querySelectorAll('#b-items .item').forEach(el => { const on = SEL.has(el.dataset.id); el.classList.toggle('sel', on); const c = el.querySelector('.f-sel'); if (c) c.checked = on; });
+    updateSelUI();
+  });
+  $('#b-sel-del').addEventListener('click', () => {
+    const pick = D.items.filter(it => SEL.has(it.id)); if (!pick.length) return;
+    const names = pick.slice(0, 12).map(it => it.char || '(빈 칸)').join(' ') + (pick.length > 12 ? ' …' : '');
+    if (!confirm('선택한 한자 ' + pick.length + '개를 목록에서 뺄까요? 정해 둔 자리·힌트도 함께 지워집니다.\n' + names)) return;
+    D.items = D.items.filter(it => !SEL.has(it.id)); SEL.clear();
+    renderItems(); renderPick(); save();
+    toast(pick.length + '개를 뺐어요.');
+  });
+  function renderItems(){
+    const box = $('#b-items'); box.innerHTML = '';
+    if (!D.items.length) box.innerHTML = '<p class="note">아직 한자가 없습니다. 위 ‘2. 한자 고르기’에서 넣으세요.</p>';
+    D.items.forEach((it, i) => box.appendChild(itemEl(it, i)));
+    $('#b-count').textContent = D.items.length;
+    $('#b-pick-count').textContent = D.items.length;
+    syncAllMarkers(); drawSpot(); updateCheck(); renderGameSel(); updateSelUI();
+  }
+  function itemEl(it, i){
+    const el = document.createElement('div');
+    el.className = 'item'; el.dataset.id = it.id;
+    el.innerHTML =
+      '<div class="item-top"><input type="checkbox" class="f-sel" aria-label="선택"><span class="num">' + (i+1) + '</span>' +
+      '<input class="f-char han" maxlength="4" placeholder="學" aria-label="한자">' +
+      '<input class="f-meaning" maxlength="30" placeholder="훈음 (예: 배울 학)" aria-label="훈음">' +
+      '<button class="del" title="삭제">삭제</button></div>' +
+      '<div class="row only-walk" style="margin-top:8px">' +
+      '<label style="flex:3 1 220px">위치 (위도, 경도 또는 Plus Code)<input class="f-loc" placeholder="지도에서 찍거나 붙여넣기"></label>' +
+      '<label style="flex:1 1 90px">반경(m)<input class="f-radius" type="number" min="3" max="300"></label></div>' +
+      '<div class="row btns only-walk"><button class="b-pick">🗺 지도에서 찍기</button><button class="b-here">📍 지금 내 위치</button><button class="b-show">지도에서 보기</button></div>' +
+      '<div class="row only-spot" style="margin-top:8px">' +
+      '<label style="flex:1 1 120px">방향(°, 0=정면, 90=오른쪽)<input class="f-bearing" type="number" min="0" max="359" step="1"></label>' +
+      '<label style="flex:1 1 110px">높이<select class="f-elev"><option value="1">위</option><option value="0">정면</option><option value="-1">아래</option></select></label>' +
+      '<button class="b-look"' + (PH.on ? '' : ' hidden') + '>📱 지금 보는 쪽에 놓기</button></div>' +
+      '<details><summary>더 보기: 부수 · 오답 힌트 · 퀴즈 오답 보기</summary><div class="grid" style="margin-top:8px">' +
+      '<label>부수 (선택)<input class="f-radical han" maxlength="4" placeholder="예: 子"></label>' +
+      '<label>오답 시 보여 줄 힌트 (선택)<input class="f-hint" maxlength="80" placeholder="예: 학교의 ‘학’"></label>' +
+      '<label style="grid-column:1/-1">퀴즈 오답 보기 최대 3개, 쉼표로 구분 (비우면 다른 한자의 훈음으로 자동)<input class="f-wrong" placeholder="예: 가르칠 교, 글 서, 벗 우"></label>' +
+      '</div></details><div class="item-status"></div>';
+    const q = s => el.querySelector(s);
+    q('.f-sel').checked = SEL.has(it.id); el.classList.toggle('sel', SEL.has(it.id));
+    q('.f-sel').addEventListener('change', e => { if (e.target.checked) SEL.add(it.id); else SEL.delete(it.id); el.classList.toggle('sel', e.target.checked); updateSelUI(); });
+    q('.f-char').value = it.char; q('.f-meaning').value = it.meaning; q('.f-loc').value = locText(it);
+    q('.f-radius').value = it.radius; q('.f-radical').value = it.radical; q('.f-hint').value = it.hint; q('.f-wrong').value = it.wrong.join(', ');
+    q('.f-bearing').value = it.bearing == null ? '' : Math.round(it.bearing); q('.f-elev').value = String(it.elev);
+    q('.f-char').addEventListener('input', e => { it.char = e.target.value.trim(); syncMarker(it); drawSpot(); updateItemStatus(it); save(); });
+    q('.f-char').addEventListener('change', () => {
+      if (it.char && !it.meaning && LOOK.has(it.char)){ it.meaning = LOOK.get(it.char).r; q('.f-meaning').value = it.meaning; updateItemStatus(it); save(); }
+      renderPick();
+    });
+    q('.f-meaning').addEventListener('input', e => { it.meaning = e.target.value.trim(); updateItemStatus(it); save(); });
+    q('.f-radius').addEventListener('input', e => { const v = parseFloat(e.target.value); if (isFinite(v) && v > 0){ it.radius = v; syncMarker(it); updateItemStatus(it); save(); } });
+    q('.f-radical').addEventListener('input', e => { it.radical = e.target.value.trim(); save(); });
+    q('.f-hint').addEventListener('input', e => { it.hint = e.target.value.trim(); save(); });
+    q('.f-wrong').addEventListener('input', e => { it.wrong = e.target.value.split(/[,，]/).map(s => s.trim()).filter(Boolean).slice(0,3); save(); });
+    q('.f-bearing').addEventListener('input', e => {
+      const v = e.target.value.trim();
+      it.bearing = v === '' || !isFinite(+v) ? null : norm(Math.round(+v));
+      drawSpot(); updateItemStatus(it); save();
+    });
+    q('.f-elev').addEventListener('change', e => { it.elev = +e.target.value; drawSpot(); updateItemStatus(it); save(); });
+    q('.b-look').addEventListener('click', () => {
+      if (PH.h == null){ toast('아직 휴대폰 방향을 읽지 못했어요.'); return; }
+      it.bearing = Math.round(norm(PH.h - PH.front));
+      it.elev = PH.pitch > 15 ? 1 : PH.pitch < -15 ? -1 : 0;
+      q('.f-bearing').value = it.bearing; q('.f-elev').value = String(it.elev);
+      drawSpot(); updateItemStatus(it); save();
+      toast('‘' + (it.char || '한자') + '’ → ' + it.bearing + '° ' + ELEV_NAME[it.elev]);
+    });
+    q('.f-loc').addEventListener('change', e => {
+      const v = e.target.value.trim();
+      if (!v){ it.lat = it.lng = null; syncMarker(it); updateItemStatus(it); save(); return; }
+      const p = parseLocation(v, refPoint());
+      if (!p){ const st = q('.item-status'); st.className = 'item-status st-bad'; st.textContent = '위치를 알아보지 못했어요. 예: 36.6283, 127.4561 또는 JCMG+CC'; return; }
+      it.lat = +p.lat.toFixed(7); it.lng = +p.lng.toFixed(7);
+      e.target.value = locText(it); syncMarker(it); updateItemStatus(it); save();
+      if (map) map.setView([it.lat, it.lng], Math.max(map.getZoom(), 18));
+      if (p.kind !== '좌표') toast(p.kind + '를 위도·경도로 바꿨어요. 지도에서 위치를 한 번 확인해 주세요.');
+    });
+    q('.del').addEventListener('click', () => {
+      if (!confirm((it.char || (i+1) + '번') + ' 한자를 삭제할까요?')) return;
+      D.items = D.items.filter(x => x !== it); renderItems(); renderPick(); save();
+    });
+    q('.b-pick').addEventListener('click', () => startPlacing(it.id));
+    q('.b-here').addEventListener('click', ev => useMyLocation(it, ev.currentTarget));
+    q('.b-show').addEventListener('click', () => {
+      if (it.lat == null){ toast('아직 위치가 없어요.'); return; }
+      if (map){ map.setView([it.lat, it.lng], 19); $('#b-map').scrollIntoView({behavior:'smooth', block:'center'}); }
+    });
+    el.addEventListener('focusin', () => highlightItem(it.id, false));
+    const s = itemStatus(it); q('.item-status').className = 'item-status ' + s.cls; q('.item-status').textContent = s.text;
+    return el;
+  }
+  function highlightItem(id, scroll){
+    document.querySelectorAll('.item.active').forEach(x => x.classList.remove('active'));
+    const el = document.querySelector('.item[data-id="' + id + '"]');
+    if (el){ el.classList.add('active'); if (scroll) el.scrollIntoView({behavior:'smooth', block:'center'}); }
+  }
+  function refreshLocInput(it){
+    const el = document.querySelector('.item[data-id="' + it.id + '"] .f-loc');
+    if (el) el.value = locText(it);
+    updateItemStatus(it);
+  }
+  function useMyLocation(it, btn){
+    if (!('geolocation' in navigator)){ toast('이 브라우저는 위치 기능을 지원하지 않아요.'); return; }
+    const old = btn.textContent; btn.disabled = true; btn.textContent = '위치 확인 중…';
+    navigator.geolocation.getCurrentPosition(p => {
+      btn.disabled = false; btn.textContent = old;
+      it.lat = +p.coords.latitude.toFixed(7); it.lng = +p.coords.longitude.toFixed(7);
+      refreshLocInput(it); syncMarker(it); save();
+      if (map) map.setView([it.lat, it.lng], 19);
+      const acc = Math.round(p.coords.accuracy);
+      toast((it.char || '한자') + ' 위치를 지금 위치로 정했어요 (오차 약 ±' + acc + 'm)' + (acc > 25 ? ' — 오차가 커요. 잠시 뒤 다시 눌러 보세요.' : ''));
+    }, err => {
+      btn.disabled = false; btn.textContent = old;
+      toast(err.code === 1 ? '위치 권한이 막혀 있어요. 브라우저 주소창의 사이트 설정에서 위치를 허용해 주세요.' : '위치를 잡지 못했어요. 하늘이 보이는 곳에서 다시 시도해 주세요.');
+    }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
+  }
+  $('#b-add').addEventListener('click', () => {
+    const it = newItem(D); D.items.push(it); renderItems(); save(); highlightItem(it.id, true);
+    const inp = document.querySelector('.item[data-id="' + it.id + '"] .f-char'); if (inp) setTimeout(() => inp.focus({preventScroll:true}), 350);
+  });
+
+  /* ----- 3. 지도 (걸어 다니며 찾기) ----- */
+  let map = null, L = null, placingId = null;
+  const markers = {};
+  function pinIcon(it){
+    return L.divIcon({className:'', html:'<div class="map-pin han">' + esc(it.char || '?') + '</div>', iconSize:[36,36], iconAnchor:[18,18]});
+  }
+  function syncMarker(it){
+    if (!map) return;
+    let m = markers[it.id];
+    if (it.lat == null){ if (m){ map.removeLayer(m.mk); map.removeLayer(m.c); delete markers[it.id]; } return; }
+    if (!m){
+      const mk = L.marker([it.lat, it.lng], {draggable:true, icon:pinIcon(it), autoPan:true}).addTo(map);
+      const c = L.circle([it.lat, it.lng], {radius:+it.radius || 15, color:'#b4462b', weight:1, fillOpacity:.12, interactive:false}).addTo(map);
+      mk.on('drag', e => c.setLatLng(e.target.getLatLng()));
+      mk.on('dragend', e => { const ll = e.target.getLatLng(); const t = find(m.id); if (!t) return; t.lat = +ll.lat.toFixed(7); t.lng = +ll.lng.toFixed(7); refreshLocInput(t); save(); });
+      mk.on('click', () => highlightItem(m.id, true));
+      m = markers[it.id] = {mk, c, id:it.id};
+    } else {
+      m.mk.setLatLng([it.lat, it.lng]); m.mk.setIcon(pinIcon(it));
+      m.c.setLatLng([it.lat, it.lng]); m.c.setRadius(+it.radius || 15);
+    }
+  }
+  function syncAllMarkers(){
+    if (!map) return;
+    for (const id of Object.keys(markers)) if (!find(id)){ map.removeLayer(markers[id].mk); map.removeLayer(markers[id].c); delete markers[id]; }
+    D.items.forEach(syncMarker);
+  }
+  function startPlacing(id){
+    if (!map){ toast('지도를 불러오지 못해 지도에서 찍을 수 없어요. 좌표를 직접 입력해 주세요.'); return; }
+    placingId = id; const it = find(id);
+    document.body.classList.add('placing');
+    $('#b-place-text').textContent = '‘' + (it.char || '새 한자') + '’을(를) 둘 지점을 지도에서 누르세요.';
+    $('#b-place-banner').hidden = false;
+    $('#b-map').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  function stopPlacing(){ placingId = null; document.body.classList.remove('placing'); $('#b-place-banner').hidden = true; }
+  $('#b-place-cancel').addEventListener('click', stopPlacing);
+  function onMapClick(e){
+    const lat = +e.latlng.lat.toFixed(7), lng = +e.latlng.lng.toFixed(7);
+    if (placingId){
+      const it = find(placingId);
+      if (it){ it.lat = lat; it.lng = lng; refreshLocInput(it); syncMarker(it); save(); highlightItem(it.id, false); toast('‘' + (it.char || '한자') + '’ 위치를 정했어요.'); }
+      stopPlacing(); return;
+    }
+    const div = document.createElement('div');
+    const unplaced = D.items.filter(x => x.lat == null).slice(0, 8);
+    if (unplaced.length){
+      const p = document.createElement('div'); p.style.cssText = 'font-size:.85rem;margin-bottom:4px'; p.textContent = '여기에 놓을 한자:'; div.appendChild(p);
+      const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px';
+      unplaced.forEach(it => {
+        const b = document.createElement('button'); b.className = 'han'; b.style.cssText = 'font-size:1.2rem;padding:2px 8px'; b.textContent = it.char || '?';
+        b.addEventListener('click', () => { map.closePopup(); it.lat = lat; it.lng = lng; refreshLocInput(it); syncMarker(it); save(); highlightItem(it.id, false); toast('‘' + (it.char || '한자') + '’ 위치를 정했어요.'); });
+        wrap.appendChild(b);
+      });
+      div.appendChild(wrap);
+    }
+    const b = document.createElement('button'); b.className = 'primary'; b.textContent = '여기에 새 한자 추가';
+    b.addEventListener('click', () => {
+      map.closePopup();
+      const it = newItem(D); it.lat = lat; it.lng = lng; D.items.push(it);
+      renderItems(); save(); highlightItem(it.id, true);
+      const inp = document.querySelector('.item[data-id="' + it.id + '"] .f-char'); if (inp) setTimeout(() => inp.focus({preventScroll:true}), 350);
+    });
+    div.appendChild(b);
+    L.popup().setLatLng(e.latlng).setContent(div).openOn(map);
+  }
+  function fitAll(){
+    if (!map || D.mode !== 'walk') return;
+    const pts = D.items.filter(x => x.lat != null).map(x => [x.lat, x.lng]);
+    if (pts.length === 1) map.setView(pts[0], 18);
+    else if (pts.length > 1) map.fitBounds(pts, {padding:[40,40], maxZoom:19});
+  }
+  loadLeaflet().then(lib => {
+    L = lib;
+    map = L.map('b-map', {zoomControl:true}).setView([36.5, 127.8], 7);
+    addBaseLayers(L, map, toast);
+    map.on('click', onMapClick);
+    syncAllMarkers(); fitAll();
+  }).catch(() => {
+    $('#b-map').innerHTML = '<div class="map-fail">지도를 불러오지 못했습니다(인터넷 연결 확인). 지도 없이도 각 한자의 위치 칸에 위도·경도를 붙여넣거나 ‘지금 내 위치’로 입력할 수 있습니다.</div>';
+  });
+  async function searchPlace(){
+    const qv = $('#b-search').value.trim(); const box = $('#b-search-results'); box.innerHTML = '';
+    if (!qv) return;
+    const p = parseLocation(qv, refPoint());
+    if (p && map){ map.setView([p.lat, p.lng], 18); return; }
+    if (!map){ toast('지도가 없어 검색할 수 없어요.'); return; }
+    box.textContent = '검색 중…';
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=ko&countrycodes=kr&q=' + encodeURIComponent(qv));
+      const list = await r.json(); box.innerHTML = '';
+      if (!list.length){ box.textContent = '찾지 못했어요. 학교 이름 대신 주소(예: ○○시 ○○로 123)로 검색하거나, 지도를 직접 움직여 주세요.'; return; }
+      list.forEach(x => {
+        const b = document.createElement('button'); b.textContent = x.display_name;
+        b.addEventListener('click', () => { map.setView([+x.lat, +x.lon], 18); box.innerHTML = ''; });
+        box.appendChild(b);
+      });
+    } catch(e){ box.textContent = '검색에 실패했어요. 구글 지도에서 학교를 길게 눌러(또는 우클릭) 나온 위도·경도를 이 칸에 붙여넣고 검색을 누르면 그곳으로 이동합니다.'; }
+  }
+  $('#b-search-btn').addEventListener('click', searchPlace);
+  $('#b-search').addEventListener('keydown', e => { if (e.key === 'Enter') searchPlace(); });
+  $('#b-gohere').addEventListener('click', () => {
+    if (!map) return;
+    navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 18),
+      () => toast('위치를 가져오지 못했어요.'), {enableHighAccuracy:true, timeout:15000});
+  });
+  $('#b-scatter-btn').addEventListener('click', () => {
+    if (!map){ toast('지도를 불러오지 못해 흩뿌릴 수 없어요.'); return; }
+    const todo = D.items.filter(it => it.lat == null);
+    if (!todo.length){ toast('위치가 없는 한자가 없어요.'); return; }
+    if (map.getZoom() < 15 && !confirm('지도가 아주 넓게 보이는 상태입니다. 지금 지도 가운데를 기준으로 흩뿌릴까요?\n(먼저 학교를 찾아 크게 확대해 두는 것을 권합니다)')) return;
+    const R = Math.max(10, Math.min(500, +$('#b-scatter-range').value || 60));
+    const ctr = map.getCenter(), center = {lat:ctr.lat, lng:ctr.lng};
+    const placed = D.items.filter(it => it.lat != null);
+    let gap = Math.max(2 * (+D.defaultRadius || 15), 10), shrunk = false;
+    for (const it of todo){
+      let ok = false;
+      for (let t = 0; t < 600 && !ok; t++){
+        if (t > 0 && t % 150 === 0){ gap *= 0.75; shrunk = true; }
+        const p = offsetPoint(center, R * Math.sqrt(Math.random()), Math.random() * 360);
+        if (placed.every(q => distM(q, p) >= gap)){ it.lat = +p.lat.toFixed(7); it.lng = +p.lng.toFixed(7); placed.push(it); ok = true; }
+      }
+      if (!ok){ const p = offsetPoint(center, R * Math.sqrt(Math.random()), Math.random() * 360); it.lat = +p.lat.toFixed(7); it.lng = +p.lng.toFixed(7); placed.push(it); shrunk = true; }
+    }
+    renderItems(); save(); fitAll();
+    toast(todo.length + '개를 놓았어요.' + (shrunk ? ' 공간이 좁아 한자 사이 간격을 줄였어요. 범위를 넓히거나 핀을 옮겨 주세요.' : ''), 4000);
+  });
+  $('#b-unplace-btn').addEventListener('click', () => {
+    if (!D.items.some(it => it.lat != null)) return;
+    if (!confirm('지도에 놓은 위치를 모두 지울까요?')) return;
+    D.items.forEach(it => { it.lat = null; it.lng = null; }); renderItems(); save();
+  });
+
+  /* ----- 3. 학생 주위 (제자리) ----- */
+  $('#b-spread-even').addEventListener('click', () => {
+    const n = D.items.length; if (!n){ toast('먼저 한자를 고르세요.'); return; }
+    const mix = $('#b-mix-elev').checked;
+    D.items.forEach((it, i) => { it.bearing = Math.round(i * 360 / n); it.elev = mix ? [0, 1, -1][i % 3] : 0; });
+    renderItems(); save(); toast('한자 ' + n + '개를 고르게 펼쳤어요.');
+  });
+  $('#b-spread-rand').addEventListener('click', () => {
+    const n = D.items.length; if (!n){ toast('먼저 한자를 고르세요.'); return; }
+    const mix = $('#b-mix-elev').checked;
+    const taken = [];
+    let gap = Math.min(40, 300 / n);
+    D.items.forEach(it => {
+      let b = 0, e = 0, ok = false;
+      for (let t = 0; t < 400 && !ok; t++){
+        if (t > 0 && t % 100 === 0) gap *= 0.7;
+        b = Math.floor(Math.random() * 360); e = mix ? [-1, 0, 1][Math.floor(Math.random() * 3)] : 0;
+        ok = taken.every(x => x.e !== e || Math.abs(angDiff(x.b, b)) >= gap);
+      }
+      it.bearing = b; it.elev = e; taken.push({b, e});
+    });
+    renderItems(); save(); toast('한자 ' + n + '개를 무작위로 흩었어요.');
+  });
+  const PH = {on:false, front:null, h:null, pitch:0, got:false};
+  function onPhOrient(e){
+    const o = readOrientation(e); if (!o) return;
+    PH.h = o.h; PH.pitch = o.pitch; PH.got = true;
+    if (PH.front == null) PH.front = o.h;
+    const el = PH.pitch > 15 ? 1 : PH.pitch < -15 ? -1 : 0;
+    $('#b-phone-status').textContent = '지금 보는 쪽: ' + Math.round(norm(PH.h - PH.front)) + '° · ' + ELEV_NAME[el];
+  }
+  function phoneOn(){
+    if (PH.on) return;
+    PH.on = true;
+    window.addEventListener('deviceorientation', onPhOrient, true);
+    $('#b-phone-front').hidden = false;
+    document.querySelectorAll('.b-look').forEach(b => b.hidden = false);
+    $('#b-phone-status').textContent = '방향을 읽는 중…';
+    setTimeout(() => { if (!PH.got) $('#b-phone-status').textContent = '이 기기에서는 방향을 읽지 못했어요(컴퓨터에서는 안 됩니다. 휴대폰으로 열어 주세요).'; }, 2500);
+  }
+  $('#b-phone-on').addEventListener('click', () => {
+    if (iosOrientPerm){
+      DeviceOrientationEvent.requestPermission().then(r => { if (r === 'granted') phoneOn(); else toast('방향 권한이 거부됐어요.'); }).catch(() => toast('방향을 켜지 못했어요.'));
+    } else phoneOn();
+  });
+  $('#b-phone-front').addEventListener('click', () => { if (PH.h != null){ PH.front = PH.h; toast('지금 보는 쪽을 정면(0°)으로 정했어요.'); } });
+  function drawSpot(){
+    const cv = $('#b-spot-canvas'); if (!cv || D.mode !== 'spot') return;
+    const ctx = cv.getContext('2d'), W = cv.width, cx = W/2, cy = W/2;
+    const R = {'1':240, '0':175, '-1':110};
+    ctx.clearRect(0, 0, W, W);
+    ctx.strokeStyle = '#e2ded5'; ctx.lineWidth = 2;
+    [240, 175, 110].forEach(r => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke(); });
+    ctx.fillStyle = '#9a968c'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('정면', cx, 22); ctx.fillText('뒤', cx, W - 18); ctx.fillText('오른쪽', W - 40, cy); ctx.fillText('왼쪽', 40, cy);
+    ctx.font = '16px sans-serif'; ctx.fillText('바깥 원: 위 · 가운데: 정면 · 안쪽: 아래', cx, cy + 62);
+    ctx.fillStyle = '#2563eb'; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 34); ctx.lineTo(cx - 9, cy - 16); ctx.lineTo(cx + 9, cy - 16); ctx.closePath(); ctx.fill();
+    D.items.forEach(it => {
+      if (it.bearing == null) return;
+      const r = R[String(it.elev)] || 175, a = toRad(it.bearing);
+      const x = cx + Math.sin(a) * r, y = cy - Math.cos(a) * r;
+      ctx.fillStyle = '#b4462b'; ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI*2); ctx.fill();
+      const ch = it.char || '?';
+      ctx.fillStyle = '#fff'; ctx.font = Math.round(ch.length > 1 ? 34 / ch.length + 6 : 26) + 'px serif'; ctx.fillText(ch, x, y + 1);
+    });
+  }
+
+  /* ----- 5. 결과 모으기 설정 ----- */
+  $('#b-gas').addEventListener('input', e => { D.gas = e.target.value.trim(); save(); updateTeamUI(); });
+  $('#b-team').addEventListener('change', e => { D.team = e.target.checked; save(); updateTeamUI(); });
+  $('#b-team-max').addEventListener('input', e => { const v = parseInt(e.target.value, 10); if (isFinite(v)){ D.teamMax = Math.max(2, Math.min(TEAM_MAX_LIMIT, v)); save(); } });
+  $('#b-team-max').addEventListener('change', e => { e.target.value = D.teamMax; });
+  function updateTeamUI(){
+    $('#b-team-max').disabled = !D.team;
+    const n = $('#b-team-note');
+    if (D.team && !D.gas){ n.className = 'note st-bad'; n.textContent = '모둠 기능은 위의 결과 수집 주소가 있어야 동작합니다. 주소를 먼저 넣어 주세요.'; }
+    else { n.className = 'note'; n.textContent = '켜면 학생이 시작할 때 모둠 이름을 적습니다. 같은 모둠 이름을 적은 친구들이 잡은 한자는 모두의 목록에 함께 채워지고, 모둠이 다 모으면 함께 끝납니다. 정한 인원(2~' + TEAM_MAX_LIMIT + '명)이 차면 그 모둠에는 더 들어갈 수 없습니다. 이전 판 Code.gs를 쓰고 있다면 새 Code.gs로 바꿔 ‘새 버전’으로 배포해야 합니다.'; }
+  }
+  $('#b-consent').addEventListener('input', e => { D.consent = e.target.value; save(); });
+  $('#b-consent-reset').addEventListener('click', () => { D.consent = DEFAULT_CONSENT; $('#b-consent').value = DEFAULT_CONSENT; save(); });
+  $('#b-codegs').addEventListener('click', () => download('Code.gs', CODE_GS, 'text/plain;charset=utf-8'));
+  async function pingGas(url){
+    const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=ping', {cache:'no-store'});
+    const j = await r.json();
+    if (!j || !j.ok || j.app !== 'hanjaAR') throw new Error('notapp');
+    return j;
+  }
+  $('#b-gas-test').addEventListener('click', async () => {
+    const url = (D.gas || '').trim(), m = $('#b-gas-msg');
+    if (!url){ m.className = 'note st-bad'; m.textContent = '주소를 먼저 넣으세요.'; return; }
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)){ m.className = 'note st-warn'; m.textContent = '앱스 스크립트 웹 앱 주소(https://script.google.com/macros/s/…/exec)가 맞는지 확인하세요.'; }
+    m.className = 'note'; m.textContent = '확인 중…';
+    try {
+      const j = await pingGas(url);
+      if (D.team && !j.team){ m.className = 'note st-warn'; m.textContent = '연결은 됐지만 이 시트의 Code.gs가 이전 판이라 모둠 기능이 동작하지 않아요. ‘Code.gs 내려받기’로 받은 새 코드로 바꿔 붙여 넣고, 배포 관리 → 수정 → 새 버전으로 배포하세요.'; }
+      else { m.className = 'note st-ok'; m.textContent = '✓ 연결됐어요. 학생 기록이 이 시트로 모입니다.' + (D.team ? ' 모둠 기능도 쓸 수 있어요.' : ''); }
+    }
+    catch(e){ m.className = 'note st-bad'; m.textContent = '연결을 확인하지 못했어요. 주소가 …/exec로 끝나는지, 액세스 권한을 ‘모든 사용자’로 배포했는지, Code.gs를 이 앱에서 받은 것으로 붙여 넣었는지 확인하세요.'; }
+  });
+
+  /* ----- 6. 점검 · 링크 · 내보내기 ----- */
+  function validate(){
+    const errs = [], warns = [];
+    const spot = D.mode === 'spot';
+    if (!D.items.length) errs.push('찾을 한자를 1개 이상 고르세요.');
+    D.items.forEach((it, i) => {
+      const n = (i+1) + '번(' + (it.char || '?') + ')';
+      if (!it.char) errs.push(n + ': 한자를 입력하세요.');
+      if (!it.meaning) errs.push(n + ': 훈음을 입력하세요.');
+      if (!isPlaced(it, D.mode)) errs.push(n + ': ' + (spot ? '방향을 정하세요(‘고르게 펼치기’를 누르면 한꺼번에 정해집니다).' : '위치를 정하세요(‘흩뿌리기’로 한꺼번에 놓을 수도 있습니다).'));
+      else if (!spot && +it.radius < 8) warns.push(n + ': 반경 ' + it.radius + 'm는 GPS 오차보다 작을 수 있어요.');
+    });
+    if (spot){
+      const pl = D.items.filter(it => it.bearing != null);
+      for (let i = 0; i < pl.length; i++) for (let j = i+1; j < pl.length; j++){
+        const a = pl[i], b = pl[j];
+        if (a.elev === b.elev && Math.abs(angDiff(a.bearing, b.bearing)) < 12) warns.push('‘' + a.char + '’와 ‘' + b.char + '’가 같은 높이에서 ' + Math.round(Math.abs(angDiff(a.bearing, b.bearing))) + '°로 너무 붙어 있어요.');
+      }
+    } else {
+      const placed = D.items.filter(x => x.lat != null);
+      for (let i = 0; i < placed.length; i++) for (let j = i+1; j < placed.length; j++){
+        const a = placed[i], b = placed[j], d = distM(a, b);
+        if (d < Math.max(+a.radius, +b.radius)) warns.push('‘' + a.char + '’와 ‘' + b.char + '’가 ' + Math.round(d) + 'm로 너무 가까워 범위가 겹쳐요.');
+      }
+      if (placed.length > 1){
+        const c = {lat: placed.reduce((s,x)=>s+x.lat,0)/placed.length, lng: placed.reduce((s,x)=>s+x.lng,0)/placed.length};
+        placed.forEach(x => { if (distM(c, x) > 1500) warns.push('‘' + x.char + '’가 다른 한자들과 1.5km 이상 떨어져 있어요. 좌표를 확인하세요.'); });
+      }
+    }
+    const seen = {};
+    D.items.forEach(x => { if (x.char){ if (seen[x.char]) warns.push('‘' + x.char + '’가 두 번 들어 있어요.'); seen[x.char] = 1; } });
+    const mean = {};
+    D.items.forEach(x => { if (x.meaning){ if (mean[x.meaning]) warns.push('훈음 ‘' + x.meaning + '’이(가) 겹쳐요. 퀴즈 보기가 헷갈릴 수 있어요.'); mean[x.meaning] = 1; } });
+    if (D.gas && !/^https:\/\/script\.google(usercontent)?\.com\//.test(D.gas)) warns.push('결과 수집 주소가 앱스 스크립트 웹 앱 주소처럼 보이지 않아요.');
+    if (D.team && !D.gas) errs.push('모둠으로 함께 모으기를 켰는데 결과 수집 주소가 없어요(5단계). 주소를 넣거나 모둠 기능을 끄세요.');
+    if (D.items.length > 40) warns.push('한자가 ' + D.items.length + '개로 많아요. 링크와 QR이 길어집니다.');
+    return {errs, warns};
+  }
+  function updateCheck(){
+    const {errs, warns} = validate(); const box = $('#b-check');
+    let h = '';
+    if (errs.length) h += '<p class="st-bad" style="margin:0"><b>보내기 전에 고칠 것 ' + errs.length + '개</b></p><ul class="check-list st-bad">' + errs.slice(0,12).map(x => '<li>' + esc(x) + '</li>').join('') + (errs.length > 12 ? '<li>…</li>' : '') + '</ul>';
+    else h += '<p class="st-ok" style="margin:0"><b>✓ 보낼 준비가 됐어요 (' + (D.mode === 'spot' ? '제자리' : '걸어 다니며') + ' · 한자 ' + D.items.length + '개' + (D.timeLimitMin > 0 ? ' · 제한 시간 ' + D.timeLimitMin + '분' : ' · 제한 시간 없음') + (D.gas ? ' · 결과 모으기 켜짐' : '') + (D.team && D.gas ? ' · 모둠 최대 ' + D.teamMax + '명' : '') + ')</b></p>';
+    if (warns.length) h += '<p class="st-warn" style="margin:8px 0 0"><b>확인해 보면 좋은 것</b></p><ul class="check-list st-warn">' + warns.slice(0,10).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+    box.innerHTML = h;
+    $('#b-link-box').hidden = true;
+  }
+  function guard(){
+    const {errs} = validate();
+    if (errs.length){ alert('아직 고칠 것이 있어요:\n\n' + errs.slice(0,8).join('\n')); $('#b-check').scrollIntoView({behavior:'smooth'}); return false; }
+    return true;
+  }
+  const exportData = () => normalizeGame(JSON.parse(JSON.stringify(D)));
+
+  let appUrl = '';
+  try { appUrl = localStorage.getItem(APPURL_KEY) || ''; } catch(e){}
+  if (!appUrl && location.protocol === 'https:') appUrl = location.origin + location.pathname;
+  $('#b-appurl').value = appUrl;
+  $('#b-appurl').addEventListener('input', e => { try { localStorage.setItem(APPURL_KEY, e.target.value.trim()); } catch(err){} $('#b-link-box').hidden = true; });
+  $('#b-make-link').addEventListener('click', async () => {
+    if (!guard()) return;
+    let base = $('#b-appurl').value.trim().split('#')[0];
+    if (!/^https:\/\//.test(base)){
+      alert('학생이 접속할 앱 주소(https://로 시작)를 먼저 적어 주세요.\n이 파일을 index.html로 올린 GitHub Pages 주소 등입니다.');
+      $('#b-appurl').focus(); return;
+    }
+    const url = base + '#g=' + await encodeGame(exportData());
+    $('#b-link-box').hidden = false;
+    $('#b-link').value = url;
+    $('#b-link-len').textContent = '링크 길이 ' + url.length + '자' + (url.length > 1300 ? ' — 링크가 길어 QR이 아주 촘촘합니다. 한자 수를 줄이거나 게임을 둘로 나누는 것을 권합니다.' : url.length > 700 ? ' — QR이 촘촘하니 ‘QR 크게 띄우기’로 보여 주세요.' : '');
+    $('#b-qr').innerHTML = '<span class="note">QR 만드는 중…</span>';
+    drawQR($('#b-qr'), url, 300).catch(() => { $('#b-qr').innerHTML = '<p class="note">QR을 만들지 못했어요(인터넷 연결 확인). 링크를 복사해 보내 주세요.</p>'; });
+    $('#b-link-box').scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+  $('#b-link-copy').addEventListener('click', () => {
+    const v = $('#b-link').value;
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast('링크를 복사했어요.'))
+      .catch(() => { $('#b-link').select(); try { document.execCommand('copy'); toast('링크를 복사했어요.'); } catch(e){ toast('직접 선택해 복사해 주세요.'); } });
+  });
+  $('#b-qr-big').addEventListener('click', () => {
+    $('#b-qr-modal').hidden = false;
+    $('#b-qr-modal-title').textContent = D.title || '한자 찾기';
+    const s = Math.max(200, Math.min(window.innerWidth - 40, window.innerHeight - 160, 900));
+    drawQR($('#b-qr-modal-box'), $('#b-link').value, s).catch(() => { $('#b-qr-modal-box').textContent = 'QR을 만들지 못했어요.'; });
+  });
+  $('#b-qr-close').addEventListener('click', () => { $('#b-qr-modal').hidden = true; });
+  $('#b-preview').addEventListener('click', async () => {
+    if (!guard()) return;
+    const w = window.open('', '_blank');
+    const url = location.href.split('#')[0].split('?')[0] + '#g=' + await encodeGame(exportData()) + '&p=1';
+    if (w) w.location.href = url;
+    else toast('새 창이 막혔어요. 브라우저의 팝업 차단을 풀어 주세요.');
+  });
+  $('#b-export').addEventListener('click', () => {
+    if (!guard()) return;
+    try { download('index.html', buildExportHTML(exportData()), 'text/html;charset=utf-8'); toast('index.html을 내려받았어요. https 주소에 올리면 학생이 바로 이 게임을 합니다.'); }
+    catch(e){ alert('파일을 만들지 못했습니다: ' + e.message); }
+  });
+  $('#b-backup').addEventListener('click', () => {
+    download((D.title || '한자찾기').replace(/[\\/:*?"<>|\s]+/g, '_') + '_백업.json', JSON.stringify(exportData(), null, 2), 'application/json');
+  });
+  $('#b-restore').addEventListener('click', () => $('#b-restore-file').click());
+  $('#b-restore-file').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result); if (!d || !Array.isArray(d.items)) throw new Error();
+        if (!d.id) d.id = uid('g');
+        importGame(d, '백업 파일'); reloadAll(); toast('백업을 불러왔어요.');
+      } catch(err){ alert('올바른 백업 파일이 아니에요.'); }
+      e.target.value = '';
+    };
+    r.readAsText(f);
+  });
+
+  /* ----- 7. 학생 결과 보기 ----- */
+  let R = null;
+  try { $('#b-r-gas').value = localStorage.getItem(RGAS_KEY) || ''; } catch(e){}
+  try { $('#b-r-key').value = sessionStorage.getItem(RGAS_KEY + '-k') || ''; } catch(e){}
+  $('#b-r-load').addEventListener('click', async () => {
+    const url = ($('#b-r-gas').value.trim() || D.gas || '').trim(), key = $('#b-r-key').value, m = $('#b-r-msg');
+    if (!url){ m.className = 'note st-bad'; m.textContent = '결과 수집 주소를 넣으세요.'; return; }
+    $('#b-r-gas').value = url;
+    try { localStorage.setItem(RGAS_KEY, url); sessionStorage.setItem(RGAS_KEY + '-k', key); } catch(e){}
+    m.className = 'note'; m.textContent = '불러오는 중…';
+    try {
+      const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=results&key=' + encodeURIComponent(key), {cache:'no-store'});
+      const j = await r.json();
+      if (!j.ok){
+        m.className = 'note st-bad';
+        m.textContent = j.error === 'key' ? '비밀번호가 맞지 않아요(Code.gs의 TEACHER_KEY).' : j.error === 'nokey' ? 'Code.gs 맨 위 TEACHER_KEY를 아직 바꾸지 않았어요. 바꾼 뒤 새 버전으로 배포하세요.' : '결과를 불러오지 못했어요.';
+        return;
+      }
+      R = j;
+      const sel = $('#b-r-game');
+      sel.innerHTML = j.games.length ? j.games.map(g => '<option value="' + esc(g.id) + '">' + esc(g.title || g.id) + ' · 학생 ' + g.students + '명</option>').join('') : '<option value="">(아직 기록 없음)</option>';
+      if (j.games.some(g => g.id === D.id)) sel.value = D.id;
+      m.className = 'note st-ok'; m.textContent = '✓ 불러왔어요 (기록 ' + j.rows.length + '줄).';
+      renderReport();
+    } catch(e){
+      m.className = 'note st-bad'; m.textContent = '불러오지 못했어요. 주소가 …/exec로 끝나는지, ‘모든 사용자’로 배포했는지 확인하세요.';
+    }
+  });
+  $('#b-r-game').addEventListener('change', renderReport);
+  $('#b-r-pv').addEventListener('change', renderReport);
+  function aggregate(rows, gameId, withPv){
+    const seen = new Set(), st = {}, ch = {}, tms = {};
+    let total = 0;
+    rows.filter(r => r.game === gameId && (withPv || !r.pv)).sort((a, b) => a.t - b.t).forEach(r => {
+      if (r.cid){ if (seen.has(r.cid)) return; seen.add(r.cid); }
+      const k = r.name + '|' + r.no;
+      const s = st[k] || (st[k] = {name:r.name, no:r.no, diff:r.diff, team:'', first:r.t, last:r.t, caps:new Set(), score:0, wrong:0, hints:0, end:'', elapsed:0, ext:0});
+      s.last = Math.max(s.last, r.t); if (r.diff) s.diff = r.diff; if (r.team) s.team = r.team;
+      if (r.team && r.ev === 'capture'){ const tm = tms[r.team] || (tms[r.team] = {team:r.team, items:new Set(), members:new Set(), score:0}); tm.items.add(r.item || r.char); tm.score += r.score; }
+      if (r.team){ const tm = tms[r.team] || (tms[r.team] = {team:r.team, items:new Set(), members:new Set(), score:0}); tm.members.add(r.name); }
+      let ex = {}; try { ex = r.extra ? JSON.parse(r.extra) : {}; } catch(e){}
+      if (ex.total) total = Math.max(total, +ex.total || 0);
+      const chOf = () => ch[r.char] || (ch[r.char] = {char:r.char, meaning:r.meaning, caps:new Set(), wrong:0, wrongBy:new Set()});
+      if (r.ev === 'capture'){ const c = chOf(); c.caps.add(k); if (!c.meaning) c.meaning = r.meaning; if (!s.caps.has(r.char)){ s.caps.add(r.char); s.score += r.score; if (r.hint) s.hints++; } }
+      else if (r.ev === 'wrong'){ const c = chOf(); s.wrong++; c.wrong++; c.wrongBy.add(k); if (!c.meaning) c.meaning = r.meaning; }
+      else if (r.ev === 'end'){ s.end = ex.reason || 'end'; if (ex.elapsed) s.elapsed = +ex.elapsed; }
+      else if (r.ev === 'extend') s.ext++;
+    });
+    return {students:Object.values(st), chars:Object.values(ch), teams:Object.values(tms), total};
+  }
+  const END_NAME = {complete:'모두 찾음', time:'시간 종료', quit:'그만함', end:'끝남'};
+  function renderReport(){
+    const out = $('#b-r-out');
+    if (!R){ out.innerHTML = ''; return; }
+    const gid = $('#b-r-game').value;
+    if (!gid){ out.innerHTML = '<p class="note">아직 이 시트에 모인 기록이 없어요.</p>'; return; }
+    const A = aggregate(R.rows, gid, $('#b-r-pv').checked);
+    const tot = A.total || Math.max(0, ...A.students.map(s => s.caps.size));
+    const need = s => (!s.team && tot && s.caps.size / tot < 0.5) || s.wrong >= 5;   /* 모둠 학생은 혼자 잡은 수가 적어도 정상 */
+    A.students.sort((a, b) => (a.caps.size - b.caps.size) || (b.wrong - a.wrong) || a.name.localeCompare(b.name));
+    A.chars.sort((a, b) => (b.wrong - a.wrong) || (a.caps.size - b.caps.size));
+    const fmtT = t => { if (!t) return ''; const d = new Date(t); return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
+    const avg = A.students.length ? (A.students.reduce((s, x) => s + x.caps.size, 0) / A.students.length).toFixed(1) : 0;
+    let h = '<p class="note">학생 ' + A.students.length + '명 · 평균 ' + avg + '자 찾음' + (tot ? ' (전체 ' + tot + '자)' : '') + ' · 연한 주황 줄은 절반도 못 찾았거나(모둠 학생 제외) 오답이 5번 이상인 학생입니다.</p>';
+    const hasTeam = A.teams.length > 0;
+    if (hasTeam){
+      A.teams.sort((a, b) => (b.items.size - a.items.size) || a.team.localeCompare(b.team));
+      h += '<h3>모둠별</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>모둠</th><th>함께 찾은 한자</th><th>인원</th><th>구성원</th><th>점수 합</th></tr></thead><tbody>' +
+        A.teams.map(t => '<tr><td>' + esc(t.team) + '</td><td>' + t.items.size + (tot ? '/' + tot : '') + '</td><td>' + t.members.size + '</td><td>' + esc(Array.from(t.members).join(', ')) + '</td><td>' + t.score + '</td></tr>').join('') +
+        '</tbody></table></div><p class="note">학생별 표의 ‘찾은 한자’는 그 학생이 직접 잡은 수입니다.</p>';
+    }
+    h += '<h3>학생별 (도움이 필요한 학생이 위)</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>이름</th><th>학번</th>' + (hasTeam ? '<th>모둠</th>' : '') + '<th>난이도</th><th>찾은 한자</th><th>점수</th><th>오답</th><th>힌트 본 수</th><th>상태</th><th>걸린 시간</th><th>마지막 기록</th></tr></thead><tbody>' +
+      A.students.map(s => '<tr class="' + (need(s) ? 'need' : '') + '"><td>' + esc(s.name) + '</td><td>' + esc(s.no) + '</td>' + (hasTeam ? '<td>' + esc(s.team) + '</td>' : '') + '<td>' + (s.diff === 'easy' ? '쉬움' : '보통') + '</td><td>' + s.caps.size + (tot ? '/' + tot : '') + '</td><td>' + s.score + '</td><td>' + s.wrong + '</td><td>' + s.hints + '</td><td>' + (s.end ? END_NAME[s.end] || s.end : '진행 중') + (s.ext ? ' (+' + (s.ext * 5) + '분)' : '') + '</td><td>' + (s.elapsed ? fmtTime(s.elapsed) : '') + '</td><td>' + fmtT(s.last) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+    h += '<h3>한자별 (많이 틀린 한자가 위)</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>한자</th><th>훈음</th><th>찾은 학생</th><th>오답 횟수</th><th>틀린 학생</th></tr></thead><tbody>' +
+      A.chars.map(c => '<tr><td class="c han">' + esc(c.char) + '</td><td>' + esc(c.meaning) + '</td><td>' + c.caps.size + '</td><td>' + c.wrong + '</td><td>' + c.wrongBy.size + '</td></tr>').join('') +
+      '</tbody></table></div>';
+    h += '<div class="b-actions"><button id="b-r-csv">학생별 표를 CSV로 저장</button></div>';
+    out.innerHTML = h;
+    $('#b-r-csv').addEventListener('click', () => {
+      const lines = [['이름','학번','모둠','난이도','찾은 한자 수','전체','점수','오답','힌트','상태','걸린 시간(초)','찾은 한자']].concat(A.students.map(s =>
+        [s.name, s.no, s.team, s.diff === 'easy' ? '쉬움' : '보통', s.caps.size, tot, s.score, s.wrong, s.hints, s.end ? END_NAME[s.end] || s.end : '진행 중', Math.round(s.elapsed / 1000), Array.from(s.caps).join(' ')]));
+      const csv = '﻿' + lines.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+      download('한자찾기_결과_' + (($('#b-r-game').selectedOptions[0] || {}).text || 'game').split(' · ')[0].replace(/[\\/:*?"<>|\s]+/g, '_') + '.csv', csv, 'text/csv;charset=utf-8');
+    });
+  }
+
+  /* ----- 처음 그리기 ----- */
+  function reloadAll(){
+    stopPlacing();
+    loadSettings(); renderGameSel(); renderPick(); renderItems(); fitAll();
+    $('#b-link-box').hidden = true;
+    if (!D.items.length) $('#b-help').open = true;
+  }
+  reloadAll();
+}
+/* =========================================================
+   학생용 게임
+   ========================================================= */
+function initGame(data, opts){
+  const preview = !!data._preview;
+  const debug = !!opts.debug || preview;
+  const spot = data.mode === 'spot';
+  const items = data.items.filter(it => it && it.char && it.meaning && isPlaced(it, data.mode));
+  const KEY = (preview ? 'hanjaAR-preview:' : 'hanjaAR:') + data.id;
+  const QKEY = 'hanjaAR-queue';
+  const FOV = 60, VFOV = 80;
+  document.body.classList.add('g-mode');
+  document.title = data.title;
+  $('#game').hidden = false;
+
+  let S = load();
+  function blank(){ return {name:'', no:'', team:'', diff:'normal', captured:{}, mate:{}, tries:{}, hinted:{}, startedAt:null, extraMs:0, ext:0, ended:false, endReason:'', endedAt:null}; }
+  function load(){ try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.captured) return Object.assign(blank(), s); } catch(e){} return blank(); }
+  function persist(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+  const easy = () => S.diff === 'easy';
+  const guideOn = () => !!data.guide || easy();
+  const hintAfter = () => easy() ? 1 : (+data.hintAfterWrong || 2);
+  const capRadius = it => (+it.radius || 15) * (easy() ? 1.5 : 1);
+  const walkCapAngle = () => easy() ? 45 : 35;
+  const spotCapAngle = () => easy() ? 20 : 12;
+  const soundOf = m => { const p = String(m).trim().split(/\s+/); return p[p.length - 1]; };
+  const TEAM = !!(data.team && data.gas);
+  /* 모둠: 내가 잡았거나(S.captured) 친구가 잡은(S.mate) 한자는 ‘모은 한자’ */
+  const isGot = it => !!(S.captured[it.id] || (TEAM && S.mate[it.id]));
+  const gotCount = () => items.filter(isGot).length;
+  const myCount = () => Object.keys(S.captured).length;
+
+  const G = {pos:null, acc:null, fakePos:null, h:null, hasAbs:false, pitch:0, manualHeading:null, manualPitch:null, forceInRange:false,
+    geoWatch:null, stream:null, orientOn:false, lastOrient:0, loop:null, quiz:null, markers:{}, geoState:'prompt',
+    drag:{on:false, yaw:0, pitch:0}, front:null, tuOpen:false, review:null};
+
+  function show(id){ ['#scr-err','#scr-start','#scr-perm','#scr-play','#scr-end'].forEach(s => $(s).hidden = (s !== id)); }
+  let toastT;
+  function toast(msg){ const t = $('#g-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2400); }
+
+  /* ----- 결과 보내기 (선생님 구글 시트) ----- */
+  function loadQ(){ try { return JSON.parse(localStorage.getItem(QKEY)) || []; } catch(e){ return []; } }
+  function saveQ(q){ try { localStorage.setItem(QKEY, JSON.stringify(q.slice(-500))); } catch(e){} }
+  let flushing = false;
+  function flush(){
+    if (flushing) return;
+    const q = loadQ(); if (!q.length) return;
+    flushing = true;
+    const m = q[0];
+    fetch(m.to, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(m.body), keepalive:true})
+      .then(() => { const q2 = loadQ().filter(x => x.body.cid !== m.body.cid); saveQ(q2); flushing = false; if (q2.length) flush(); })
+      .catch(() => { flushing = false; setTimeout(flush, 15000); });
+  }
+  function send(ev, extra){
+    if (!data.gas) return;
+    const body = Object.assign({cid:uid('e'), game:data.id, title:data.title, name:S.name, no:S.no, diff:S.diff, ev}, TEAM && S.team ? {team:S.team} : {}, extra || {});
+    if (preview) body.pv = 1;
+    const q = loadQ(); q.push({to:data.gas, body}); saveQ(q); flush();
+  }
+  window.addEventListener('online', flush);
+  flush();
+
+  /* ----- 시작 화면 ----- */
+  $('#st-title').textContent = data.title;
+  $('#st-sub').textContent = '숨은 한자 ' + items.length + '개 · ' + (spot ? '제자리에서 둘러보며 찾기' : '걸어 다니며 찾기') + (data.timeLimitMin > 0 ? ' · 제한 시간 ' + data.timeLimitMin + '분' : '');
+  $('#st-howto').innerHTML = spot
+    ? '① 선 자리에서 휴대폰을 세로로 들고, 몸을 천천히 돌리며 주위(앞뒤·좌우·위아래)를 둘러봐요.<br>② 한자가 화면 가운데 원 안에 들어오면 ‘포획하기’ 버튼이 켜져요.<br>③ 그 한자의 훈음(뜻과 음)을 맞히면 포획 성공!<br>※ 주위 친구와 부딪치지 않게 조심해요.'
+    : '① 휴대폰을 들고 학교 곳곳을 걸어 다니며 숨은 한자를 찾아요.<br>② 한자 가까이 가서 휴대폰을 그쪽으로 향하면 ‘포획하기’ 버튼이 켜져요.<br>③ 그 한자의 훈음(뜻과 음)을 맞히면 포획 성공!<br>※ 걸을 때는 화면만 보지 말고 주변을 살피세요.';
+  if (!window.isSecureContext) $('#st-insecure').hidden = false;
+  if (!items.length) $('#st-sub').textContent = '이 게임에는 아직 한자가 없습니다. 선생님께 알려 주세요.';
+  if (data.gas){
+    $('#st-no-wrap').hidden = false; $('#st-consent-box').hidden = false;
+    $('#st-consent-text').textContent = data.consent || DEFAULT_CONSENT;
+    $('#st-privacy').textContent = '이름·학번과 찾은 한자·오답 기록이 선생님의 구글 시트로 전송됩니다.';
+  } else $('#st-privacy').textContent = '이름과 기록은 이 휴대폰에만 저장되며 어디로도 전송되지 않습니다.';
+  if (TEAM){
+    $('#st-team-wrap').hidden = false; $('#st-team-note').hidden = false;
+    $('#st-team-label').textContent = '모둠 이름 (한 모둠 최대 ' + data.teamMax + '명)';
+    $('#st-team-note').textContent = '같은 모둠 친구들과 똑같은 모둠 이름을 적으세요. 친구가 잡은 한자도 내 목록에 함께 채워져요.';
+    $('#st-team').value = S.team || '';
+  }
+  let selDiff = S.diff || 'normal';
+  const setDiff = d => { selDiff = d; $('#st-diff-easy').setAttribute('aria-pressed', String(d === 'easy')); $('#st-diff-normal').setAttribute('aria-pressed', String(d !== 'easy')); };
+  setDiff(selDiff);
+  $('#st-diff-easy').addEventListener('click', () => setDiff('easy'));
+  $('#st-diff-normal').addEventListener('click', () => setDiff('normal'));
+  const nameIn = $('#st-name'), noIn = $('#st-no');
+  nameIn.value = S.name || ''; noIn.value = S.no || '';
+  const hasProgress = S.startedAt && !S.ended;
+  if (hasProgress){
+    $('#st-resume').hidden = false;
+    $('#st-resume').textContent = '이어서 하기 (' + gotCount() + '/' + items.length + ' 찾음)';
+    $('#st-new').textContent = '처음부터 새로 하기'; $('#st-new').classList.remove('primary');
+    if (data.gas) $('#st-agree').checked = true;
+  }
+  const formOk = () => !!nameIn.value.trim() && items.length > 0 && (!data.gas || (!!noIn.value.trim() && $('#st-agree').checked)) && (!TEAM || !!normTeam($('#st-team').value));
+  const checkForm = () => { $('#st-new').disabled = !formOk(); $('#st-resume').disabled = !formOk(); };
+  [nameIn, noIn, $('#st-team')].forEach(x => x.addEventListener('input', checkForm));
+  $('#st-agree').addEventListener('change', checkForm);
+  checkForm();
+  /* 모둠 참가: 서버가 정원을 확인한 뒤에만 다음 화면으로 */
+  async function joinTeam(team){
+    const url = data.gas + (data.gas.includes('?') ? '&' : '?') + 'action=join&game=' + encodeURIComponent(data.id) + '&team=' + encodeURIComponent(team) +
+      '&name=' + encodeURIComponent(nameIn.value.trim()) + '&no=' + encodeURIComponent(noIn.value.trim()) + '&max=' + data.teamMax + (preview ? '&pv=1' : '');
+    try { const r = await fetch(url, {cache:'no-store'}); return await r.json(); }
+    catch(e){ return {ok:false, error:'network'}; }
+  }
+  async function beginWith(fresh){
+    const team = TEAM ? normTeam($('#st-team').value) : '';
+    if (TEAM){
+      const btns = [$('#st-new'), $('#st-resume')], keep = btns.map(b => b.textContent);
+      btns.forEach(b => { b.disabled = true; }); $('#st-new').textContent = '모둠 확인 중…';
+      const j = await joinTeam(team);
+      if (j.ok && !j.limit){ j.ok = false; j.error = 'old'; }   /* 이전 판 Code.gs는 join을 모르고 안내만 돌려줌 */
+      btns.forEach((b, i) => { b.textContent = keep[i]; }); checkForm();
+      if (!j.ok){
+        const msg = j.error === 'team_full' ? '‘' + team + '’ 모둠은 이미 ' + j.limit + '명이 다 찼어요(' + (j.members || []).join(', ') + '). 다른 모둠 이름을 쓰거나 선생님께 물어보세요.'
+          : j.error === 'busy' ? '다른 친구들이 동시에 들어오는 중이에요. 잠시 뒤 다시 눌러 주세요.'
+          : j.error === 'old' ? '선생님 시트의 Code.gs가 이전 판이라 모둠에 들어갈 수 없어요. 선생님께 알려 주세요.'
+          : '모둠에 들어가지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.';
+        $('#st-team-note').textContent = msg; $('#st-team-note').style.color = '#ffb4a8';
+        alert(msg); return;
+      }
+      $('#st-team-note').style.color = '';
+      $('#st-team-note').textContent = '‘' + team + '’ 모둠: ' + (j.members || []).join(', ') + ' (' + j.count + '/' + j.limit + '명)';
+    }
+    if (fresh) S = blank();
+    if (TEAM && S.team && S.team !== team) S.mate = {};
+    S.name = nameIn.value.trim(); S.no = noIn.value.trim(); S.diff = selDiff; S.team = team; persist(); goPerm();
+  }
+  $('#st-new').addEventListener('click', () => {
+    if (hasProgress && !confirm('지금까지 찾은 기록이 지워져요. 처음부터 할까요?')) return;
+    beginWith(true);
+  });
+  $('#st-resume').addEventListener('click', () => beginWith(false));
+
+  /* ----- 권한 화면 ----- */
+  function setBadge(which, cls, text, msgHTML){
+    const b = $('#pm-' + which + '-badge'); b.className = 'badge ' + (cls || ''); b.textContent = text;
+    if (msgHTML != null) $('#pm-' + which + '-msg').innerHTML = msgHTML;
+  }
+  function geoDeniedHTML(){
+    const p = platform();
+    if (p === 'ios') return '위치가 막혀 있어요. 아래 순서대로 풀어 주세요.<ol>' +
+      '<li><b>설정</b> 앱 → <b>개인정보 보호 및 보안</b> → <b>위치 서비스</b>: 맨 위 ‘위치 서비스’가 꺼져 있으면 켜기.<br><span class="g-small">메뉴가 회색으로 눌리지 않으면 스크린타임(자녀 보호) 제한일 수 있어요. 이때는 보호자 암호가 있어야 풀 수 있으니 선생님께 알려 주세요.</span></li>' +
+      '<li>같은 화면 목록의 <b>Safari 웹사이트</b>를 눌러 ‘안 함’이 아닌 항목(예: ‘앱을 사용하는 동안’)으로 바꾸기.</li>' +
+      '<li>Safari 주소창 왼쪽의 <b>가가</b>(또는 AA) 버튼 → <b>웹사이트 설정</b> → <b>위치</b> → ‘허용’.</li>' +
+      '<li>이 페이지를 새로고침하고 다시 ‘위치 허용하기’를 누르기.</li></ol>';
+    if (p === 'android') return '위치가 막혀 있어요. 아래 순서대로 풀어 주세요.<ol>' +
+      '<li>화면 위쪽을 내려 빠른 설정에서 <b>위치</b>가 켜져 있는지 확인.</li>' +
+      '<li>브라우저 주소창 왼쪽 아이콘(자물쇠·설정 모양) → <b>권한</b>(또는 사이트 설정) → <b>위치</b> → ‘허용’.</li>' +
+      '<li>이 페이지를 새로고침하고 다시 ‘위치 허용하기’를 누르기.</li></ol>';
+    return '위치가 막혀 있어요. 브라우저 주소창 왼쪽의 사이트 설정에서 위치를 ‘허용’으로 바꾼 뒤 새로고침해 주세요.';
+  }
+  function startGeoWatch(){
+    if (G.geoWatch != null || !('geolocation' in navigator)) return;
+    G.geoWatch = navigator.geolocation.watchPosition(p => {
+      G.pos = {lat:p.coords.latitude, lng:p.coords.longitude}; G.acc = p.coords.accuracy;
+    }, () => {}, {enableHighAccuracy:true, maximumAge:2000, timeout:30000});
+  }
+  function requestGeo(){
+    if (!('geolocation' in navigator)){ setBadge('geo', 'bad', '지원 안 됨', '이 브라우저는 위치 기능을 지원하지 않아요.'); return; }
+    setBadge('geo', 'warn', '확인 중', '허용을 묻는 창이 뜨면 <b>허용</b>을 눌러 주세요. 위치를 잡는 데 몇 초 걸릴 수 있어요.');
+    navigator.geolocation.getCurrentPosition(p => {
+      G.pos = {lat:p.coords.latitude, lng:p.coords.longitude}; G.acc = p.coords.accuracy; G.geoState = 'granted';
+      setBadge('geo', 'ok', '허용됨', '위치를 잡았어요 (오차 약 ±' + Math.round(p.coords.accuracy) + 'm).');
+      startGeoWatch(); updateGo();
+    }, err => {
+      if (err.code === 1){ G.geoState = 'denied'; setBadge('geo', 'bad', '차단됨', geoDeniedHTML()); }
+      else { setBadge('geo', 'warn', '다시 시도', '위치를 아직 잡지 못했어요. 건물 밖 하늘이 보이는 곳에서 다시 눌러 주세요.'); startGeoWatch(); }
+      updateGo();
+    }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
+  }
+  function checkGeoPermission(){
+    if (!navigator.permissions || !navigator.permissions.query) return;
+    navigator.permissions.query({name:'geolocation'}).then(st => {
+      const apply = () => {
+        if (st.state === 'denied'){ G.geoState = 'denied'; setBadge('geo', 'bad', '차단됨', geoDeniedHTML()); }
+        else if (st.state === 'granted' && !G.pos) requestGeo();
+        else if (st.state === 'prompt' && G.geoState === 'denied'){ G.geoState = 'prompt'; setBadge('geo', '', '대기', '이제 ‘위치 허용하기’를 다시 눌러 주세요.'); }
+        updateGo();
+      };
+      apply(); st.onchange = apply;
+    }).catch(() => {});
+  }
+  $('#pm-geo-btn').addEventListener('click', requestGeo);
+
+  function onOrient(e){
+    const o = readOrientation(e); if (!o) return;
+    if (o.abs) G.hasAbs = true;
+    else if (G.hasAbs) return;          /* 진짜 북쪽 기준 값이 들어오면 그것만 씀 */
+    G.h = G.h == null ? o.h : norm(G.h + angDiff(o.h, G.h) * 0.25);
+    G.pitch = G.pitch + (o.pitch - G.pitch) * 0.3;
+    if (!G.lastOrient) setBadge('cmp', 'ok', '켜짐', spot ? '휴대폰 방향이 동작해요.' : '나침반이 동작해요. 8자를 그리듯 휴대폰을 몇 번 돌리면 더 정확해져요.');
+    G.lastOrient = Date.now();
+  }
+  function listenOrientation(){
+    if (G.orientOn) return; G.orientOn = true;
+    if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', onOrient, true);
+    window.addEventListener('deviceorientation', onOrient, true);
+    setTimeout(() => {
+      if (!G.lastOrient) setBadge('cmp', 'warn', '신호 없음', spot ? '방향 신호가 없어요. 화면을 손가락으로 끌어서 둘러볼 수 있어요.' : '나침반 신호가 없어요. 방향 표시 없이 거리만으로 찾을 수 있어요.');
+    }, 3000);
+  }
+  $('#pm-cmp-btn').addEventListener('click', () => {
+    DeviceOrientationEvent.requestPermission().then(r => {
+      if (r === 'granted'){ $('#pm-cmp-btn').hidden = true; setBadge('cmp', 'warn', '확인 중'); listenOrientation(); }
+      else setBadge('cmp', 'bad', '거부됨', (spot ? '손가락으로 끌어서 둘러볼 수 있어요.' : '나침반 없이 거리만으로 찾을 수 있어요.') + ' 다시 허용하려면 Safari를 완전히 닫았다가 다시 열어 주세요.');
+    }).catch(() => setBadge('cmp', 'bad', '사용 불가', spot ? '손가락으로 끌어서 둘러볼 수 있어요.' : '나침반 없이 거리만으로 찾을 수 있어요.'));
+  });
+
+  if (!data.useCamera) $('#pm-cam-box').hidden = true;
+  $('#pm-cam-btn').addEventListener('click', () => {
+    if (G.stream){ stopCamera(); setBadge('cam', '', '꺼짐'); $('#pm-cam-btn').textContent = '카메라 켜기'; return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setBadge('cam', 'bad', '지원 안 됨', '이 브라우저에서는 카메라를 쓸 수 없어요. 카메라 없이 해도 괜찮아요.'); return; }
+    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}, audio:false}).then(st => {
+      G.stream = st; const v = $('#cam'); v.srcObject = st; v.play().catch(() => {});
+      setBadge('cam', 'ok', '켜짐', '카메라가 켜졌어요.'); $('#pm-cam-btn').textContent = '카메라 끄기';
+    }).catch(() => setBadge('cam', 'bad', '거부됨', '카메라 없이 해도 괜찮아요.'));
+  });
+  function stopCamera(){ if (G.stream){ G.stream.getTracks().forEach(t => t.stop()); G.stream = null; $('#cam').srcObject = null; } }
+
+  function updateGo(){ $('#pm-go').disabled = !(spot || G.pos || debug); }
+  function goPerm(){
+    show('#scr-perm');
+    $('#pm-geo-box').hidden = spot;
+    $('#pm-cmp-msg').textContent = spot
+      ? '휴대폰을 돌리면 화면도 따라 돌아가요. 없으면 화면을 손가락으로 끌어서 둘러볼 수 있어요.'
+      : '휴대폰이 어느 쪽을 보고 있는지 알기 위해 필요해요. 없어도 거리만으로 찾을 수 있어요.';
+    if (iosOrientPerm){ $('#pm-cmp-btn').hidden = false; }
+    else { setBadge('cmp', 'warn', '확인 중'); listenOrientation(); }
+    if (!spot) checkGeoPermission();
+    updateGo();
+    if (!spot && debug && !G.pos) setBadge('geo', 'warn', '테스트', '미리보기에서는 위치 허용 없이도 시작할 수 있어요(아래 ‘🛠 테스트’에서 가상 위치를 고르세요).');
+  }
+  $('#pm-back').addEventListener('click', () => show('#scr-start'));
+  $('#pm-go').addEventListener('click', startPlay);
+
+  /* ----- 게임 화면 ----- */
+  function startPlay(){
+    if (!S.startedAt){ S.startedAt = Date.now(); persist(); send('start', {extra:{total:items.length, mode:data.mode}}); }
+    show('#scr-play');
+    $('#hud-title').textContent = data.title;
+    $('#cam-bg').hidden = !!G.stream;
+    $('#spot-tools').hidden = !spot; $('#aim').hidden = !spot;
+    $('#btn-map').hidden = spot || data.mapMode === 'off';
+    if (preview) $('#preview-banner').hidden = false;
+    if (debug) setupDebug();
+    if (!spot && debug && !G.pos && !G.fakePos && items.length){ G.fakePos = offsetPoint(items[0], 30, 180); toast('테스트: 첫 한자에서 30m 떨어진 곳에 있다고 가정해요.'); }
+    if (spot){
+      G.front = null;
+      setTimeout(() => { if (G.h == null && G.manualHeading == null && !G.drag.on){ setDrag(true); toast('화면을 손가락으로 끌어서 둘러보세요.'); } }, 1600);
+    }
+    clearInterval(G.loop); G.loop = setInterval(frame, 120); frame();
+    if (TEAM){ $('#hud-team').hidden = false; $('#hud-team').textContent = S.team + ' 모둠'; pollTeam(); clearInterval(G.teamT); G.teamT = setInterval(pollTeam, 10000); }
+  }
+  /* 모둠 현황 받아 오기: 친구가 잡은 한자를 내 목록에 채움 */
+  let polling = false;
+  async function pollTeam(){
+    if (!TEAM || polling || S.ended) return;
+    polling = true;
+    try {
+      const url = data.gas + (data.gas.includes('?') ? '&' : '?') + 'action=team&game=' + encodeURIComponent(data.id) + '&team=' + encodeURIComponent(S.team) + (preview ? '&pv=1' : '');
+      const j = await (await fetch(url, {cache:'no-store'})).json();
+      if (j && j.ok){
+        const byId = {}; items.forEach(it => byId[it.id] = it);
+        const news = [];
+        (j.caught || []).forEach(c => {
+          const it = byId[c.item]; if (!it || S.captured[it.id] || S.mate[it.id]) return;
+          S.mate[it.id] = {by:c.by, t:c.t}; news.push(c.by + '님이 ‘' + it.char + '’을(를) 찾았어요');
+        });
+        if (news.length){ persist(); toast(news.length === 1 ? news[0] : news[0] + ' 외 ' + (news.length - 1) + '자'); }
+        $('#hud-team').textContent = S.team + ' 모둠 · ' + (j.members || []).length + '명';
+        if (gotCount() >= items.length && !G.quiz) setTimeout(() => finish('complete'), 600);
+      }
+    } catch(e){}
+    polling = false;
+  }
+  const myPos = () => G.fakePos || G.pos;
+  const walkHeading = () => G.manualHeading != null ? G.manualHeading : (G.hasAbs ? G.h : null);
+  function spotView(){
+    if (G.manualHeading != null) return {yaw:G.manualHeading, pitch:G.manualPitch || 0};
+    if (G.drag.on) return {yaw:G.drag.yaw, pitch:G.drag.pitch};
+    if (G.h == null) return null;
+    if (G.front == null) G.front = G.h;
+    return {yaw:norm(G.h - G.front), pitch:G.manualPitch != null ? G.manualPitch : G.pitch};
+  }
+  function setDrag(on){
+    G.drag.on = on;
+    if (on){ const v = G.h != null && G.front != null ? norm(G.h - G.front) : 0; G.drag.yaw = v; G.drag.pitch = 0; }
+    $('#btn-drag').setAttribute('aria-pressed', String(on));
+    $('#drag-pad').hidden = !on;
+  }
+  $('#btn-drag').addEventListener('click', () => setDrag(!G.drag.on));
+  $('#btn-front').addEventListener('click', () => {
+    if (G.drag.on){ G.drag.yaw = 0; G.drag.pitch = 0; }
+    else if (G.h != null) G.front = G.h;
+    toast('지금 보는 쪽을 정면으로 맞췄어요.');
+  });
+  (function bindDrag(){
+    const pad = $('#drag-pad'); let last = null;
+    pad.addEventListener('pointerdown', e => { last = {x:e.clientX, y:e.clientY}; pad.setPointerCapture(e.pointerId); });
+    pad.addEventListener('pointermove', e => {
+      if (!last) return;
+      G.drag.yaw = norm(G.drag.yaw - (e.clientX - last.x) * 0.25);
+      G.drag.pitch = Math.max(-60, Math.min(60, G.drag.pitch + (e.clientY - last.y) * 0.25));
+      last = {x:e.clientX, y:e.clientY};
+    });
+    const up = () => { last = null; };
+    pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+  })();
+
+  function compute(){
+    if (spot){
+      const v = spotView();
+      if (!v) return {list:items.filter(it => !isGot(it)).map(it => ({it, dy:null, dp:null, capt:false})), view:null};
+      const ang = spotCapAngle();
+      const list = items.filter(it => !isGot(it)).map(it => {
+        const dy = angDiff(it.bearing, v.yaw), dp = it.elev * ELEV_DEG - v.pitch;
+        return {it, dy, dp, capt: Math.abs(dy) <= ang && Math.abs(dp) <= ang + 8};
+      });
+      return {list, view:v};
+    }
+    const pos = myPos(), heading = walkHeading();
+    if (!pos) return {list:[], heading, pos};
+    const list = items.filter(it => !isGot(it)).map(it => {
+      const d = distM(pos, it), b = bearing(pos, it);
+      const diff = heading == null ? null : angDiff(b, heading);
+      const inRange = G.forceInRange || d <= capRadius(it);
+      const facing = diff == null || Math.abs(diff) <= walkCapAngle();
+      return {it, d, b, diff, inRange, capt: inRange && facing};
+    });
+    return {list, heading, pos};
+  }
+  let currentTarget = null;
+  function frame(){
+    const C = compute();
+    const found = gotCount();
+    $('#hud-prog').textContent = (TEAM ? '모둠이 찾은 한자 ' : '찾은 한자 ') + found + ' / ' + items.length;
+    const gps = $('#hud-gps');
+    if (spot){ gps.className = ''; gps.textContent = (easy() ? '쉬움 · ' : '') + (G.manualHeading != null ? '테스트 방향' : G.drag.on ? '손가락으로 둘러보기' : G.h == null ? '방향 찾는 중…' : '제자리 모드'); }
+    else if (G.fakePos){ gps.textContent = '가상 위치'; gps.className = ''; }
+    else if (!G.pos){ gps.textContent = 'GPS 찾는 중…'; gps.className = 'bad'; }
+    else { gps.textContent = (easy() ? '쉬움 · ' : '') + 'GPS ±' + Math.round(G.acc || 0) + 'm'; gps.className = (G.acc > 25 ? 'bad' : ''); }
+    if (S.startedAt){
+      if (data.timeLimitMin > 0){
+        const rem = data.timeLimitMin*60000 + (S.extraMs || 0) - (Date.now() - S.startedAt);
+        const t = $('#hud-timer'); t.textContent = '⏱ ' + fmtTime(rem); t.classList.toggle('low', rem <= 60000);
+        if (rem <= 0 && !G.tuOpen && !S.ended){ openTimeUp(); }
+      } else $('#hud-timer').textContent = '⏱ ' + fmtTime(Date.now() - S.startedAt);
+    }
+    const capts = C.list.filter(x => x.capt).sort(spot
+      ? (a, b) => (Math.abs(a.dy) + Math.abs(a.dp)) - (Math.abs(b.dy) + Math.abs(b.dp))
+      : (a, b) => (Math.abs(a.diff || 0) - Math.abs(b.diff || 0)) || (a.d - b.d));
+    currentTarget = G.tuOpen ? null : (capts[0] || null);
+    if (spot){ renderSpotAR(C); renderRadarSpot(C); renderNearestSpot(C); }
+    else { renderAR(C.list, C.heading); renderRadar(C.list, C.heading); renderNearest(C.list, C.heading); updateMapMe(); }
+    $('#radar').hidden = !guideOn();
+    const btn = $('#btn-capture');
+    btn.disabled = !currentTarget || !!G.quiz;
+    btn.innerHTML = currentTarget ? '‘<span class="han">' + esc(currentTarget.it.char) + '</span>’ 포획하기' : '포획하기';
+  }
+  function markerEl(it){
+    let el = G.markers[it.id];
+    if (!el){
+      el = document.createElement('div'); el.className = 'ar-mk';
+      el.innerHTML = '<span class="ch han"></span><span class="dist"></span>';
+      el.querySelector('.ch').textContent = it.char;
+      el.addEventListener('click', () => { if (currentTarget && currentTarget.it.id === it.id) openQuiz(it); else toast(spot ? '한자를 화면 가운데 원 안으로 맞춰 보세요.' : '조금 더 가까이 가서 한자 쪽을 바라봐야 해요.'); });
+      $('#ar-layer').appendChild(el); G.markers[it.id] = el;
+    }
+    return el;
+  }
+  function dropUnseen(seen){ for (const id of Object.keys(G.markers)) if (!seen[id]){ G.markers[id].remove(); delete G.markers[id]; } }
+  function renderAR(list, heading){
+    const seen = {};
+    if (heading != null){
+      list.forEach(x => {
+        if (Math.abs(x.diff) > FOV/2 + 6 || x.d > 400) return;
+        seen[x.it.id] = 1;
+        const el = markerEl(x.it);
+        const left = 50 + (x.diff / (FOV/2)) * 50;
+        const top = 30 + (1 - Math.min(x.d, 200)/200) * 30;
+        const hot = !!(currentTarget && currentTarget.it.id === x.it.id);
+        const band = x.d <= 10 ? 'd10' : x.d <= 20 ? 'd20' : x.d <= 30 ? 'd30' : x.d <= 40 ? 'd40' : 'dfar';
+        el.style.left = left + '%'; el.style.top = top + '%';
+        el.style.zIndex = String(hot ? 2000 : 1000 - Math.round(x.d));
+        el.className = 'ar-mk ' + band + (hot ? ' hot' : '');
+        el.querySelector('.dist').textContent = hot ? '포획 가능' : fmtDist(x.d);
+      });
+    }
+    dropUnseen(seen);
+  }
+  function renderSpotAR(C){
+    const seen = {};
+    if (C.view){
+      C.list.forEach(x => {
+        if (Math.abs(x.dy) > FOV/2 + 8 || Math.abs(x.dp) > VFOV/2 + 10) return;
+        seen[x.it.id] = 1;
+        const el = markerEl(x.it);
+        const hot = !!(currentTarget && currentTarget.it.id === x.it.id);
+        el.style.left = (50 + (x.dy / (FOV/2)) * 50) + '%';
+        el.style.top = (50 - (x.dp / (VFOV/2)) * 50) + '%';
+        el.style.zIndex = String(hot ? 2000 : 1000);
+        el.className = 'ar-mk spot' + (hot ? ' hot' : '');
+        el.querySelector('.dist').textContent = hot ? '포획 가능' : '';
+      });
+    }
+    dropUnseen(seen);
+  }
+  function renderNearest(list, heading){
+    const box = $('#nearest');
+    if (!myPos()){ box.innerHTML = '<span>위치를 찾는 중… 건물 밖으로 나가면 더 빨라요.</span>'; return; }
+    if (!list.length){ box.innerHTML = ''; return; }
+    if (currentTarget){ box.innerHTML = '<span>찾았다! 아래 <b>포획하기</b>를 누르세요</span>'; return; }
+    const n = list.slice().sort((a, b) => a.d - b.d)[0];
+    if (!guideOn()){ box.innerHTML = '<span>가장 가까운 한자까지 <b>' + fmtDist(n.d) + '</b></span>'; return; }
+    if (n.inRange && heading != null){ box.innerHTML = '<span>아주 가까워요! 휴대폰을 <b>' + (n.diff > 0 ? '오른쪽' : '왼쪽') + '</b>으로 돌려 보세요</span>'; return; }
+    const where = heading != null ? relName(n.diff) : dirName(n.b) + '쪽';
+    box.innerHTML = '<span>가장 가까운 한자: <b>' + fmtDist(n.d) + '</b> · ' + where + '</span>';
+  }
+  function renderNearestSpot(C){
+    const box = $('#nearest');
+    if (!C.view){ box.innerHTML = '<span>휴대폰 방향을 읽는 중… (안 되면 ✋ 손가락으로 둘러보기)</span>'; return; }
+    if (!C.list.length){ box.innerHTML = ''; return; }
+    if (currentTarget){ box.innerHTML = '<span>찾았다! 아래 <b>포획하기</b>를 누르세요</span>'; return; }
+    if (!guideOn()){ box.innerHTML = '<span>주위를 천천히 둘러보세요</span>'; return; }
+    const n = C.list.slice().sort((a, b) => (Math.abs(a.dy) + Math.abs(a.dp)) - (Math.abs(b.dy) + Math.abs(b.dp)))[0];
+    const parts = [];
+    if (Math.abs(n.dy) > 8) parts.push((n.dy > 0 ? '오른쪽' : '왼쪽') + '으로 ' + Math.round(Math.abs(n.dy)) + '°');
+    if (Math.abs(n.dp) > 12) parts.push(n.dp > 0 ? '위쪽' : '아래쪽');
+    box.innerHTML = '<span>가장 가까운 한자: <b>' + (parts.join(' · ') || '바로 앞') + '</b></span>';
+  }
+  function radarBase(ctx, W, R, cx, cy, heading){
+    ctx.clearRect(0, 0, W, W);
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.arc(cx, cy, R + 4, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 2;
+    [1, .5].forEach(f => { ctx.beginPath(); ctx.arc(cx, cy, R*f, 0, Math.PI*2); ctx.stroke(); });
+    if (heading != null){
+      ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, R, -Math.PI/2 - toRad(FOV/2), -Math.PI/2 + toRad(FOV/2)); ctx.closePath(); ctx.fill();
+    }
+  }
+  function renderRadar(list, heading){
+    if (!guideOn()) return;
+    const cv = $('#radar'), ctx = cv.getContext('2d'), W = cv.width, R = W/2 - 6, cx = W/2, cy = W/2;
+    radarBase(ctx, W, R, cx, cy, heading);
+    const near = list.length ? Math.min.apply(null, list.map(x => x.d)) : 50;
+    const range = Math.max(40, Math.min(400, near * 1.6));
+    const northAng = heading != null ? -heading : 0;
+    ctx.fillStyle = '#ff8a7a'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('N', cx + Math.sin(toRad(northAng)) * (R - 12), cy - Math.cos(toRad(northAng)) * (R - 12));
+    list.forEach(x => {
+      const ang = heading != null ? x.diff : x.b;
+      const r = Math.min(1, x.d / range) * (R - 8);
+      const px = cx + Math.sin(toRad(ang)) * r, py = cy - Math.cos(toRad(ang)) * r;
+      ctx.fillStyle = (currentTarget && currentTarget.it.id === x.it.id) ? '#ffe08a' : (x.d > range ? 'rgba(255,170,90,.6)' : '#ffaa5a');
+      ctx.beginPath(); ctx.arc(px, py, x.d > range ? 5 : 8, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle = '#5aa2ff'; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = '18px sans-serif'; ctx.fillText(fmtDist(range), cx, W - 16);
+  }
+  function renderRadarSpot(C){
+    if (!guideOn()) return;
+    const cv = $('#radar'), ctx = cv.getContext('2d'), W = cv.width, R = W/2 - 6, cx = W/2, cy = W/2;
+    radarBase(ctx, W, R, cx, cy, C.view ? 0 : null);
+    if (!C.view) return;
+    C.list.forEach(x => {
+      const r = (x.it.elev === 1 ? 0.88 : x.it.elev === -1 ? 0.45 : 0.68) * (R - 6);
+      const px = cx + Math.sin(toRad(x.dy)) * r, py = cy - Math.cos(toRad(x.dy)) * r;
+      ctx.fillStyle = (currentTarget && currentTarget.it.id === x.it.id) ? '#ffe08a' : '#ffaa5a';
+      ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle = '#5aa2ff'; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI*2); ctx.fill();
+  }
+
+  /* ----- 퀴즈 · 복습 ----- */
+  function makeOptions(it){
+    const opts = [it.meaning];
+    const add = m => { if (m && opts.length < 4 && !opts.includes(m)) opts.push(m); };
+    (it.wrong || []).forEach(add);
+    shuffle(items.filter(x => x.id !== it.id).map(x => x.meaning)).forEach(add);
+    if (opts.length < 4){ const pool = DB.mid.concat(DB.high); for (let k = 0; k < 40 && opts.length < 4; k++) add(pool[Math.floor(Math.random() * pool.length)].r); }
+    shuffle(FALLBACK_MEANINGS.slice()).forEach(add);
+    return shuffle(opts);
+  }
+  const hintText = it => it.hint || ('소리(음)는 ‘' + soundOf(it.meaning) + '’이에요.');
+  function openQuiz(it, review){
+    if (G.quiz || (!review && S.captured[it.id])) return;
+    if (!review && TEAM && S.mate[it.id] && !S.captured[it.id]){ toast(S.mate[it.id].by + '님이 이미 찾은 한자예요.'); return; }
+    G.quiz = {it, review:!!review, wrongNow:0};
+    $('#quiz-title').textContent = review ? '복습 ' + (G.review.i + 1) + ' / ' + G.review.list.length : '';
+    $('#quiz-char').textContent = it.char;
+    const box = $('#quiz-opts'); box.innerHTML = '';
+    makeOptions(it).forEach(m => {
+      const b = document.createElement('button'); b.textContent = m;
+      b.addEventListener('click', () => answer(it, m, b));
+      box.appendChild(b);
+    });
+    $('#quiz-fb').textContent = '';
+    $('#quiz-say').hidden = true; $('#quiz-next').hidden = true; $('#quiz-close').hidden = false;
+    $('#quiz-close').textContent = review ? '복습 그만하기' : '나중에 풀기';
+    showHint(it);
+    $('#quiz').hidden = false;
+  }
+  function showHint(it){
+    const q = G.quiz, hb = $('#quiz-hint');
+    const wrong = q && q.review ? q.wrongNow : (S.tries[it.id] || 0);
+    if (wrong >= (q && q.review ? 1 : hintAfter())){
+      hb.hidden = false; hb.textContent = '💡 힌트: ' + hintText(it);
+      if (!(q && q.review) && !S.hinted[it.id]){ S.hinted[it.id] = 1; persist(); }
+    } else hb.hidden = true;
+  }
+  function closeQuiz(){ $('#quiz').hidden = true; G.quiz = null; }
+  function answer(it, m, btn){
+    const q = G.quiz; if (!q) return;
+    if (m === it.meaning){
+      btn.classList.add('right');
+      $('#quiz-opts').querySelectorAll('button').forEach(b => b.disabled = true);
+      $('#quiz-say').hidden = false; $('#quiz-close').hidden = true; $('#quiz-next').hidden = false;
+      if (q.review){
+        $('#quiz-fb').innerHTML = '정답! <span class="han">' + esc(it.char) + '</span> ' + esc(it.meaning);
+        $('#quiz-next').textContent = G.review.i + 1 < G.review.list.length ? '다음 한자' : '복습 끝';
+        return;
+      }
+      const wrong = S.tries[it.id] || 0;
+      const score = Math.max(3, 10 - 2*wrong);
+      S.captured[it.id] = {score, wrong, hint:!!S.hinted[it.id], at:Date.now()}; persist();
+      send('capture', {char:it.char, meaning:it.meaning, item:it.id, wrong, hint:S.hinted[it.id] ? 1 : 0, score});
+      $('#quiz-fb').innerHTML = '정답! <span class="han">' + esc(it.char) + '</span> ' + esc(it.meaning) + (it.radical ? ' · 부수 <span class="han">' + esc(it.radical) + '</span>' : '') + ' (+' + score + '점)';
+      $('#quiz-next').textContent = gotCount() >= items.length ? '결과 보기' : '계속 찾기';
+    } else {
+      btn.classList.add('wrong'); btn.disabled = true;
+      $('#quiz-fb').textContent = '아쉬워요. 다시 골라 보세요.';
+      if (q.review) q.wrongNow++;
+      else { S.tries[it.id] = (S.tries[it.id] || 0) + 1; persist(); send('wrong', {char:it.char, meaning:it.meaning, chosen:m}); }
+      showHint(it);
+    }
+  }
+  $('#quiz-say').addEventListener('click', () => { if (G.quiz && !speakItem(G.quiz.it)) toast('이 휴대폰에서는 소리를 낼 수 없어요.'); });
+  $('#quiz-next').addEventListener('click', () => {
+    const q = G.quiz; if (!q) return;
+    closeQuiz();
+    if (q.review){
+      G.review.i++;
+      if (G.review.i < G.review.list.length) openQuiz(G.review.list[G.review.i], true);
+      else { G.review = null; alert('복습을 마쳤어요. 잘했어요!'); }
+      return;
+    }
+    toast('포획 성공! ' + q.it.char + ' (' + q.it.meaning + ')' + (q.it.radical ? ' · 부수 ' + q.it.radical : ''));
+    if (gotCount() >= items.length) setTimeout(() => finish('complete'), 400);
+  });
+  $('#quiz-close').addEventListener('click', () => { const q = G.quiz; closeQuiz(); if (q && q.review) G.review = null; });
+  $('#btn-capture').addEventListener('click', () => { if (currentTarget) openQuiz(currentTarget.it); });
+
+  /* ----- 시간 끝 ----- */
+  function openTimeUp(){
+    G.tuOpen = true; closeQuiz(); $('#dexm').hidden = true; $('#mapm').hidden = true; GM.open = false;
+    $('#tu-msg').textContent = (TEAM ? '우리 모둠이 지금까지 ' : '지금까지 ') + gotCount() + ' / ' + items.length + '자를 찾았어요.';
+    $('#tu').hidden = false;
+  }
+  $('#tu-more').addEventListener('click', () => {
+    const elapsed = Date.now() - S.startedAt;
+    S.extraMs = elapsed + 5*60000 - data.timeLimitMin*60000; S.ext = (S.ext || 0) + 1; persist();
+    send('extend', {extra:{ext:S.ext}});
+    $('#tu').hidden = true; G.tuOpen = false; toast('5분 더! 힘내요.');
+  });
+  $('#tu-end').addEventListener('click', () => { $('#tu').hidden = true; G.tuOpen = false; finish('time'); });
+
+  /* ----- 지도 (걸어 다니며 찾기) ----- */
+  const MAP_MODE = data.mapMode || 'approx';
+  const GM = {map:null, L:null, layer:null, me:null, meAcc:null, open:false, fitted:false};
+  function approxArea(it){
+    const r = Math.max(30, (+it.radius || 15) * 2.5);
+    const c = offsetPoint(it, hashNum(it.id + 'd') * r * 0.6, hashNum(it.id + 'a') * 360);
+    return {lat:c.lat, lng:c.lng, r};
+  }
+  function openMap(){
+    GM.open = true; $('#mapm').hidden = false;
+    $('#map-head').textContent = '지도 · 찾은 한자 ' + gotCount() + '/' + items.length;
+    $('#map-legend').innerHTML = '<span class="lg"><i style="background:#2e7d4f"></i>찾은 한자</span>' +
+      (MAP_MODE === 'exact' ? '<span class="lg"><i style="background:#6b6f78"></i>못 찾은 한자(?)</span>' : MAP_MODE === 'approx' ? '<span class="lg"><b style="color:#fff;text-shadow:0 0 3px #000">?</b> 이 근처에 못 찾은 한자</span>' : '') +
+      '<span class="lg"><i style="background:#2f80ff"></i>나</span>';
+    loadLeaflet().then(L => {
+      GM.L = L;
+      if (!GM.map){
+        GM.map = L.map('g-map', {zoomControl:true, attributionControl:true});
+        addBaseLayers(L, GM.map, toast);
+        GM.layer = L.layerGroup().addTo(GM.map);
+      }
+      setTimeout(() => { GM.map.invalidateSize(); drawMap(); }, 60);
+    }).catch(() => {
+      $('#g-map').innerHTML = '<div class="map-fail" style="padding:20px">지도를 불러오지 못했어요(인터넷 연결 확인). 화면 오른쪽 아래 레이더로 찾아 주세요.</div>';
+    });
+  }
+  function drawMap(){
+    const L = GM.L, layer = GM.layer; if (!L || !layer) return;
+    layer.clearLayers(); GM.me = GM.meAcc = null;
+    const pts = [];
+    items.forEach(it => {
+      if (isGot(it)){
+        L.marker([it.lat, it.lng], {icon:L.divIcon({className:'', html:'<div class="gm-pin got han">' + esc(it.char) + '</div>', iconSize:[34,34], iconAnchor:[17,17]})})
+          .bindPopup('<b class="han" style="font-size:1.4em">' + esc(it.char) + '</b> ' + esc(it.meaning) + (it.radical ? '<br>부수 <span class="han">' + esc(it.radical) + '</span>' : '')).addTo(layer);
+        pts.push([it.lat, it.lng]);
+      } else if (MAP_MODE === 'exact'){
+        L.marker([it.lat, it.lng], {icon:L.divIcon({className:'', html:'<div class="gm-pin unk">?</div>', iconSize:[34,34], iconAnchor:[17,17]})}).addTo(layer);
+        pts.push([it.lat, it.lng]);
+      } else if (MAP_MODE === 'approx'){
+        const a = approxArea(it);
+        L.marker([a.lat, a.lng], {interactive:false, icon:L.divIcon({className:'', html:'<div class="gm-q">?</div>', iconSize:[28,28], iconAnchor:[14,14]})}).addTo(layer);
+        pts.push([a.lat, a.lng]);
+      }
+    });
+    updateMapMe();
+    const pos = myPos(); if (pos) pts.push([pos.lat, pos.lng]);
+    if (!GM.fitted){
+      GM.fitted = true;
+      if (!pts.length) items.forEach(it => pts.push([it.lat, it.lng]));
+      if (pts.length === 1) GM.map.setView(pts[0], 18); else if (pts.length) GM.map.fitBounds(pts, {padding:[30,30], maxZoom:19});
+    }
+  }
+  function updateMapMe(){
+    if (!GM.open || !GM.L || !GM.layer) return;
+    const pos = myPos(); if (!pos) return;
+    const ll = [pos.lat, pos.lng];
+    if (!GM.me){
+      GM.meAcc = GM.L.circle(ll, {radius:G.fakePos ? 1 : (G.acc || 10), color:'#2f80ff', weight:1, fillOpacity:.15, interactive:false}).addTo(GM.layer);
+      GM.me = GM.L.circleMarker(ll, {radius:8, color:'#fff', weight:3, fillColor:'#2f80ff', fillOpacity:1}).addTo(GM.layer);
+    } else {
+      GM.me.setLatLng(ll); GM.meAcc.setLatLng(ll); GM.meAcc.setRadius(G.fakePos ? 1 : (G.acc || 10));
+    }
+  }
+  $('#btn-map').addEventListener('click', openMap);
+  $('#map-close').addEventListener('click', () => { GM.open = false; $('#mapm').hidden = true; });
+  $('#map-me').addEventListener('click', () => { const p = myPos(); if (p && GM.map) GM.map.setView([p.lat, p.lng], 19); else toast('아직 내 위치를 몰라요.'); });
+
+  /* ----- 목록(도감) ----- */
+  function openDex(){
+    const g = $('#dex-grid'); g.innerHTML = '';
+    const pos = spot ? null : myPos();
+    $('#dex-head').textContent = (TEAM ? S.team + ' 모둠 목록 (' : '한자 목록 (') + gotCount() + '/' + items.length + ')';
+    items.forEach(it => {
+      const c = isGot(it), mine = !!S.captured[it.id], d = document.createElement('div');
+      d.className = 'dex-card' + (c ? ' got' : ' lock') + (c && !mine ? ' mate' : '');
+      if (c){
+        d.innerHTML = '<div class="c han">' + esc(it.char) + '</div><div class="m">' + esc(it.meaning) + ' 🔊</div>' + (it.radical ? '<div class="r">부수 <span class="han">' + esc(it.radical) + '</span></div>' : '') +
+          (TEAM ? '<div class="by">' + (mine ? '내가 찾음' : esc(S.mate[it.id].by) + ' 찾음') + '</div>' : '');
+        d.addEventListener('click', () => speakItem(it));
+      } else d.innerHTML = '<div class="c">?</div><div class="m">아직 못 찾음</div>' + (pos ? '<div class="r">' + fmtDist(distM(pos, it)) + '</div>' : '');
+      g.appendChild(d);
+    });
+    $('#dexm').hidden = false;
+  }
+  $('#btn-dex').addEventListener('click', openDex);
+  $('#dex-close').addEventListener('click', () => $('#dexm').hidden = true);
+  $('#btn-quit').addEventListener('click', () => { if (confirm('여기서 그만할까요? 지금까지 찾은 기록으로 끝나요.')) finish('quit'); });
+
+  /* ----- 끝 ----- */
+  function stopAll(){
+    clearInterval(G.loop); G.loop = null; clearInterval(G.teamT); G.teamT = null;
+    if (G.geoWatch != null && navigator.geolocation){ navigator.geolocation.clearWatch(G.geoWatch); G.geoWatch = null; }
+    stopCamera();
+  }
+  function totals(){
+    const n = myCount();
+    const score = Object.values(S.captured).reduce((s, c) => s + (c.score || 0), 0);
+    return {n, score};
+  }
+  function finish(reason){
+    if (!S.ended){
+      S.ended = true; S.endReason = reason; S.endedAt = Date.now(); persist();
+      const t = totals();
+      send('end', {extra:Object.assign({reason, elapsed:S.endedAt - (S.startedAt || S.endedAt), count:t.n, score:t.score, total:items.length}, TEAM ? {teamCount:gotCount()} : {})});
+    }
+    stopAll(); closeQuiz(); $('#dexm').hidden = true; $('#mapm').hidden = true; $('#tu').hidden = true; GM.open = false; G.tuOpen = false;
+    renderEnd(); show('#scr-end');
+  }
+  function reviewList(){ return items.filter(it => (S.tries[it.id] || 0) > 0 || !isGot(it)); }
+  function renderEnd(){
+    const t = totals();
+    $('#end-title').textContent = S.endReason === 'complete' ? '🎉 모두 찾았어요!' : S.endReason === 'time' ? '⏱ 시간 종료' : '게임 종료';
+    const when = S.endedAt ? new Date(S.endedAt) : new Date();
+    $('#end-sub').textContent = (S.name || '') + (S.no ? ' (' + S.no + ')' : '') + ' · ' + data.title + ' · ' + (S.diff === 'easy' ? '쉬움' : '보통') + ' · ' + when.toLocaleDateString('ko-KR') + ' ' + when.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+    $('#end-count').textContent = t.n + '/' + items.length;
+    $('#end-count-label').textContent = TEAM ? '내가 찾은 한자' : '찾은 한자';
+    const et = $('#end-team'); et.hidden = !TEAM;
+    if (TEAM){
+      const by = {};
+      items.forEach(it => { const w = S.captured[it.id] ? (S.name || '나') : (S.mate[it.id] ? S.mate[it.id].by : ''); if (w) by[w] = (by[w] || 0) + 1; });
+      et.innerHTML = '<h3>‘' + esc(S.team) + '’ 모둠이 함께 찾은 한자: ' + gotCount() + ' / ' + items.length + '</h3><div class="g-small">' +
+        (Object.keys(by).map(k => esc(k) + ' ' + by[k] + '자').join(' · ') || '아직 없음') + '</div>';
+    }
+    $('#end-score').textContent = t.score;
+    $('#end-time').textContent = S.startedAt ? fmtTime((S.endedAt || Date.now()) - S.startedAt) : '-';
+    $('#end-note').textContent = data.gas ? '기록이 선생님께 전송됐어요. 이 화면을 선생님께 보여 줘도 좋아요.' : '이 화면을 선생님께 보여 주세요.';
+    const rv = reviewList();
+    $('#end-review').hidden = !rv.length;
+    $('#end-review').textContent = '틀리거나 못 찾은 한자 복습하기 (' + rv.length + '자)';
+    const ul = $('#end-list'); ul.innerHTML = '';
+    items.forEach(it => {
+      const c = S.captured[it.id], w = S.tries[it.id] || 0, m = !c && TEAM && S.mate[it.id];
+      const li = document.createElement('li'); if (!c && !m) li.className = 'miss';
+      li.innerHTML = '<span class="c han">' + esc(it.char) + '</span><span>' + esc(it.meaning) + (it.radical ? ' · 부수 <span class="han">' + esc(it.radical) + '</span>' : '') + ' 🔊<br><span class="g-small">' + (c ? '찾음 · ' + c.score + '점' : m ? esc(m.by) + ' 찾음' : '못 찾음') + (w ? ' · 오답 ' + w + '번' : '') + '</span></span>';
+      li.addEventListener('click', () => speakItem(it));
+      ul.appendChild(li);
+    });
+  }
+  $('#end-review').addEventListener('click', () => {
+    const list = shuffle(reviewList().slice());
+    if (!list.length) return;
+    G.review = {list, i:0};
+    openQuiz(list[0], true);
+  });
+  $('#end-restart').addEventListener('click', () => {
+    if (!confirm('기록을 모두 지우고 처음부터 다시 할까요?')) return;
+    try { localStorage.removeItem(KEY); } catch(e){}
+    location.reload();
+  });
+
+  /* ----- 테스트 도구 (미리보기·?debug 일 때만) ----- */
+  function setupDebug(){
+    const tg = $('#dbg-toggle'); if (!tg.hidden) return;
+    tg.hidden = false;
+    document.querySelectorAll(spot ? '.dbg-walk' : '.dbg-spot').forEach(x => x.hidden = true);
+    tg.addEventListener('click', () => $('#dbg').hidden = !$('#dbg').hidden);
+    $('#dbg-close').addEventListener('click', () => $('#dbg').hidden = true);
+    const sel = $('#dbg-pos');
+    if (!spot) items.forEach((it, i) => {
+      [[30,'30m 남쪽'],[5,'5m 남쪽(범위 안)']].forEach(([m, label]) => {
+        const o = document.createElement('option'); o.value = i + ':' + m; o.textContent = it.char + ' 에서 ' + label; sel.appendChild(o);
+      });
+    });
+    sel.addEventListener('change', () => {
+      if (!sel.value){ G.fakePos = null; return; }
+      const [i, m] = sel.value.split(':').map(Number);
+      G.fakePos = offsetPoint(items[i], m, 180);
+      $('#dbg-head-on').checked = true; G.manualHeading = 0; $('#dbg-head').value = 0; $('#dbg-head-val').textContent = 0;
+    });
+    const hd = $('#dbg-head'), pt = $('#dbg-pitch');
+    hd.addEventListener('input', () => { $('#dbg-head-val').textContent = hd.value; if ($('#dbg-head-on').checked) G.manualHeading = +hd.value; });
+    $('#dbg-head-on').addEventListener('change', e => { G.manualHeading = e.target.checked ? +hd.value : null; });
+    pt.addEventListener('input', () => { $('#dbg-pitch-val').textContent = pt.value; if ($('#dbg-pitch-on').checked) G.manualPitch = +pt.value; });
+    $('#dbg-pitch-on').addEventListener('change', e => { G.manualPitch = e.target.checked ? +pt.value : null; });
+    $('#dbg-force').addEventListener('change', e => { G.forceInRange = e.target.checked; });
+  }
+
+  /* ----- 첫 화면 결정 ----- */
+  if (S.ended){ renderEnd(); show('#scr-end'); }
+  else show('#scr-start');
+}
+
+function showLinkError(msg){
+  document.body.classList.add('g-mode');
+  $('#game').hidden = false;
+  ['#scr-start','#scr-perm','#scr-play','#scr-end'].forEach(s => $(s).hidden = true);
+  $('#scr-err').hidden = false;
+  if (msg) $('#err-msg').textContent = msg;
+}
+/* ---------- 시작: 편집기 또는 게임 ---------- */
+function readEmbedded(){
+  try {
+    const t = (document.getElementById('game-data').textContent || '').trim();
+    if (!t || t === 'null') return null;
+    const d = JSON.parse(t);
+    return d && Array.isArray(d.items) ? normalizeGame(d) : null;
+  } catch(e){ return null; }
+}
+const params = new URLSearchParams(location.search);
+const EMBED = readEmbedded();
+window.addEventListener('hashchange', () => location.reload());
+(async function route(){
+  const m = location.hash.match(/[#&]g=([A-Za-z0-9_-]+)/);
+  if (m){
+    let data;
+    try { data = await decodeGame(m[1]); }
+    catch(e){
+      showLinkError(e.message === 'old'
+        ? '이 브라우저가 오래되어 게임을 열 수 없어요. 휴대폰의 크롬·사파리를 최신으로 업데이트한 뒤 다시 열어 주세요.'
+        : '링크가 잘렸거나 올바르지 않습니다. 선생님께 링크를 다시 받아 주세요.');
+      return;
+    }
+    if (params.has('edit')) initBuilder(data);
+    else { if (/[#&]p=1(&|$)/.test(location.hash)) data._preview = true; initGame(data, {debug: params.has('debug')}); }
+    return;
+  }
+  if (EMBED && !params.has('edit')) initGame(EMBED, {debug: params.has('debug')});
+  else initBuilder(EMBED);
+})();
+})();
+</script>
+</body>
+</html>
